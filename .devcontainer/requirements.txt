@@ -1,0 +1,55 @@
+# Development dependencies for Komodo Periphery Add-on testing
+# Fixed dependencies to avoid PyYAML/Cython conflicts
+
+# YAML processing and validation - use 6.0.1+ for Cython 3.0 compatibility
+PyYAML>=6.0.1
+yamllint>=1.32.0
+
+# JSON schema validation
+jsonschema>=4.19.0
+
+# Docker integration for testing
+docker>=6.1.0
+
+# HTTP testing and API validation
+requests>=2.31.0
+httpx>=0.24.0
+
+# Testing frameworks
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+pytest-cov>=4.1.0
+pytest-timeout>=2.1.0
+
+# Code quality tools
+black>=23.7.0
+isort>=5.12.0
+flake8>=6.0.0
+pylint>=2.17.0
+
+# Security scanning
+bandit>=1.7.0
+safety>=2.3.0
+
+# Development utilities
+rich>=13.5.0
+click>=8.1.0
+colorama>=0.4.6
+
+# Configuration management
+python-dotenv>=1.0.0
+
+# System utilities
+psutil>=5.9.0
+
+# Async utilities
+aiofiles>=23.2.0
+
+# Build dependencies to ensure compatibility
+setuptools>=64.0
+wheel>=0.37.0
+Cython>=3.0.0
+
+# Note: Additional packages can be installed manually after container setup:
+# pip install testcontainers pytest-docker home-assistant-chip-core

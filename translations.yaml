@@ -1,0 +1,31 @@
+configuration:
+  komodo_address:
+    name: Komodo Server Address
+    description: The full URL of your Komodo Core server (e.g., https://komodo.example.com)
+  komodo_api_key:
+    name: Komodo API Key
+    description: Your Komodo API key for authentication
+  komodo_api_secret:
+    name: Komodo API Secret
+    description: Your Komodo API secret for authentication
+  log_level:
+    name: Log Level
+    description: Controls the verbosity of log output
+  stats_polling_rate:
+    name: Stats Polling Rate
+    description: How often to poll the system for CPU/memory stats (e.g., 5-sec, 1-min)
+  container_stats_polling_rate:
+    name: Container Stats Polling Rate
+    description: How often to poll for Docker container statistics
+  ssl_enabled:
+    name: Enable SSL
+    description: Enable HTTPS for the Periphery API (self-signed certificates will be generated)
+  monitor_homeassistant:
+    name: Monitor Home Assistant
+    description: Enable monitoring of Home Assistant service status
+  allowed_ips:
+    name: Allowed IP Addresses
+    description: List of IP addresses allowed to access the Periphery API (optional)
+  passkeys:
+    name: API Passkeys
+    description: List of passkeys required to access the Periphery API (optional)

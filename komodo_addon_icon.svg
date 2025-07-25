@@ -1,0 +1,119 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Home Assistant blue gradient background -->
+    <radialGradient id="haBackground" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" style="stop-color:#41BDF5;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#03A9F4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0277BD;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Komodo dragon green (matching the uploaded image) -->
+    <linearGradient id="komodoGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A7C59;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2E5D3E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1B3A26;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Shadow effects -->
+    <filter id="lizardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Glow effect for HA background -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Home Assistant logomark background circle -->
+  <circle cx="64" cy="64" r="62" fill="url(#haBackground)" filter="url(#glow)"/>
+  
+  <!-- Home Assistant house logomark (subtle background) -->
+  <g opacity="0.15" transform="translate(64, 64)">
+    <!-- House outline -->
+    <path d="M -30 8 L 0 -25 L 30 8 L 24 8 L 24 30 L -24 30 L -24 8 Z" 
+          fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1"/>
+    <!-- House body -->
+    <rect x="-18" y="12" width="36" height="18" fill="rgba(255,255,255,0.3)"/>
+    <!-- Roof detail -->
+    <path d="M -24 8 L 0 -22 L 24 8 L 18 8 L 0 -15 L -18 8 Z" 
+          fill="#FFFFFF"/>
+    <!-- Door -->
+    <rect x="-4" y="20" width="8" height="10" fill="#FFFFFF"/>
+    <!-- Door handle -->
+    <circle cx="2" cy="25" r="1" fill="rgba(255,255,255,0.8)"/>
+  </g>
+  
+  <!-- Komodo dragon (based on the uploaded circular logo design) -->
+  <g filter="url(lizardShadow)" transform="translate(64, 64)">
+    <!-- Main body (rounded, compact like in the original) -->
+    <ellipse cx="0" cy="8" rx="28" ry="20" fill="url(#komodoGreen)"/>
+    
+    <!-- Head (rounded, resting on front legs) -->
+    <ellipse cx="0" cy="-5" rx="18" ry="15" fill="url(#komodoGreen)"/>
+    
+    <!-- Front legs/arms (thick, supporting the body) -->
+    <ellipse cx="-15" cy="15" rx="8" ry="12" fill="url(#komodoGreen)" transform="rotate(-10 -15 15)"/>
+    <ellipse cx="15" cy="15" rx="8" ry="12" fill="url(#komodoGreen)" transform="rotate(10 15 15)"/>
+    
+    <!-- Front paws with claws -->
+    <g fill="url(#komodoGreen)">
+      <ellipse cx="-18" cy="25" rx="6" ry="4"/>
+      <ellipse cx="18" cy="25" rx="6" ry="4"/>
+    </g>
+    
+    <!-- Claws (small details) -->
+    <g fill="#2C2C2C" opacity="0.8">
+      <ellipse cx="-21" cy="27" rx="1" ry="2"/>
+      <ellipse cx="-18" cy="28" rx="1" ry="2"/>
+      <ellipse cx="-15" cy="27" rx="1" ry="2"/>
+      <ellipse cx="21" cy="27" rx="1" ry="2"/>
+      <ellipse cx="18" cy="28" rx="1" ry="2"/>
+      <ellipse cx="15" cy="27" rx="1" ry="2"/>
+    </g>
+    
+    <!-- Back legs (partially visible) -->
+    <ellipse cx="-12" cy="22" rx="5" ry="8" fill="url(#komodoGreen)" transform="rotate(-20 -12 22)"/>
+    <ellipse cx="12" cy="22" rx="5" ry="8" fill="url(#komodoGreen)" transform="rotate(20 12 22)"/>
+    
+    <!-- Tail (curved around, characteristic of the original design) -->
+    <path d="M 25 20 Q 35 15 38 8 Q 40 0 38 -8 Q 35 -15 30 -18 Q 24 -20 18 -15" 
+          fill="url(#komodoGreen)" stroke="url(#komodoGreen)" stroke-width="8" stroke-linecap="round"/>
+    
+    <!-- Tail tip -->
+    <circle cx="18" cy="-15" r="3" fill="url(#komodoGreen)"/>
+    
+    <!-- Eyes (simple, like the original) -->
+    <ellipse cx="-6" cy="-8" rx="2" ry="3" fill="#FFFFFF"/>
+    <ellipse cx="6" cy="-8" rx="2" ry="3" fill="#FFFFFF"/>
+    <ellipse cx="-6" cy="-8" rx="1.5" ry="2" fill="#2C2C2C"/>
+    <ellipse cx="6" cy="-8" rx="1.5" ry="2" fill="#2C2C2C"/>
+    
+    <!-- Small eye highlights -->
+    <circle cx="-5.5" cy="-9" r="0.5" fill="#FFFFFF"/>
+    <circle cx="6.5" cy="-9" r="0.5" fill="#FFFFFF"/>
+    
+    <!-- Nostrils -->
+    <ellipse cx="-2" cy="-2" rx="0.8" ry="0.5" fill="#2C2C2C"/>
+    <ellipse cx="2" cy="-2" rx="0.8" ry="0.5" fill="#2C2C2C"/>
+    
+    <!-- Subtle mouth line -->
+    <path d="M -8 2 Q 0 4 8 2" stroke="#2C2C2C" stroke-width="1.5" fill="none" opacity="0.6"/>
+    
+    <!-- Body pattern (subtle scales/texture) -->
+    <g opacity="0.3" fill="#1B3A26">
+      <circle cx="-8" cy="5" r="2"/>
+      <circle cx="8" cy="8" r="1.5"/>
+      <circle cx="0" cy="12" r="1.8"/>
+      <circle cx="-5" cy="15" r="1"/>
+      <circle cx="5" cy="18" r="1.2"/>
+    </g>
+  </g>
+  
+  <!-- Subtle border with HA blue -->
+  <circle cx="64" cy="64" r="62" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.4"/>
+</svg>

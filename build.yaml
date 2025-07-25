@@ -1,0 +1,67 @@
+# Home Assistant Add-on Build Configuration
+# Multi-architecture build configuration for Komodo Periphery Add-on
+
+# Base images for each supported architecture
+build_from:
+  aarch64: "ghcr.io/home-assistant/alpine-base:3.21"
+  amd64: "ghcr.io/home-assistant/alpine-base:3.21"
+  armhf: "ghcr.io/home-assistant/alpine-base:3.21"
+  armv7: "ghcr.io/home-assistant/alpine-base:3.21"
+  i386: "ghcr.io/home-assistant/alpine-base:3.21"
+
+# Build arguments passed to Dockerfile
+args:
+  # Komodo Periphery version to install
+  KOMODO_VERSION: "latest"
+  
+  # Build timestamp for image labeling
+  BUILD_DATE: "{{TIMESTAMP}}"
+  
+  # Version control information
+  BUILD_REF: "{{BUILD_REF}}"
+  BUILD_VERSION: "{{BUILD_VERSION}}"
+  
+  # Architecture-specific build argument
+  BUILD_ARCH: "{{BUILD_ARCH}}"
+
+# Container image labels (OCI compliant)
+labels:
+  # Basic information
+  org.opencontainers.image.title: "Komodo Periphery"
+  org.opencontainers.image.description: "Komodo Periphery agent for monitoring Home Assistant OS system metrics"
+  org.opencontainers.image.vendor: "Home Assistant Community"
+  org.opencontainers.image.authors: "Home Assistant Community <hello@home-assistant.io>"
+  
+  # Source and documentation
+  org.opencontainers.image.url: "https://github.com/your-username/komodo-periphery-addon"
+  org.opencontainers.image.source: "https://github.com/your-username/komodo-periphery-addon"
+  org.opencontainers.image.documentation: "https://github.com/your-username/komodo-periphery-addon/blob/main/README.md"
+  
+  # Legal and licensing
+  org.opencontainers.image.licenses: "MIT"
+  
+  # Version information (will be populated by build system)
+  org.opencontainers.image.version: "{{BUILD_VERSION}}"
+  org.opencontainers.image.revision: "{{BUILD_REF}}"
+  org.opencontainers.image.created: "{{TIMESTAMP}}"
+  
+  # Home Assistant specific labels
+  io.hass.name: "Komodo Periphery"
+  io.hass.description: "Komodo Periphery agent for Home Assistant OS monitoring"
+  io.hass.arch: "{{BUILD_ARCH}}"
+  io.hass.type: "addon"
+  io.hass.version: "{{BUILD_VERSION}}"
+  
+  # Additional metadata
+  org.opencontainers.image.base.name: "ghcr.io/home-assistant/alpine-base:3.21"
+  org.opencontainers.image.ref.name: "komodo-periphery"
+
+# Code signing configuration (optional)
+# Uncomment and configure if you want to sign your images
+# codenotary: "your-email@example.com"
+
+# Squash layers for smaller image size (optional)
+# squash: false
+
+# Build timeout in seconds (default: 3600)
+# timeout: 3600

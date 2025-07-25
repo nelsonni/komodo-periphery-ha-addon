@@ -1,0 +1,660 @@
+name: Continuous Integration
+
+# Comprehensive CI pipeline for Komodo Periphery Add-on
+# Runs on every push and pull request to ensure code quality
+
+on:
+  push:
+    branches: [main, dev, feature/*, fix/*]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_integration_tests:
+        description: 'Run integration tests'
+        required: false
+        default: false
+        type: boolean
+      target_architecture:
+        description: 'Target architecture for testing'
+        required: false
+        default: 'amd64'
+        type: choice
+        options: ['amd64', 'aarch64', 'armv7', 'armhf', 'i386']
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "18"
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  # Pre-flight checks
+  preflight:
+    name: Pre-flight checks
+    runs-on: ubuntu-latest
+    outputs:
+      should_run_tests: ${{ steps.changes.outputs.tests }}
+      should_run_integration: ${{ steps.changes.outputs.integration }}
+      addon_version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            tests:
+              - 'tests/**'
+              - 'config.yaml'
+              - 'build.yaml'
+              - 'Dockerfile'
+              - 'rootfs/**'
+              - '.github/workflows/**'
+            integration:
+              - 'Dockerfile'
+              - 'rootfs/**'
+              - 'config.yaml'
+
+      - name: Get addon version
+        id: version
+        run: |
+          VERSION=$(grep '^version:' config.yaml | cut -d' ' -f2 | tr -d '"')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Add-on version: $VERSION"
+
+      - name: Validate workflow files
+        run: |
+          # Validate GitHub Actions workflows
+          for workflow in .github/workflows/*.yaml .github/workflows/*.yml; do
+            if [ -f "$workflow" ]; then
+              echo "Validating $workflow"
+              # Basic YAML syntax check
+              python -c "import yaml; yaml.safe_load(open('$workflow'))"
+            fi
+          done
+
+  # Code quality and linting
+  lint:
+    name: Code quality and linting
+    runs-on: ubuntu-latest
+    needs: preflight
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .devcontainer/requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package.json
+
+      - name: Install Node.js dependencies
+        run: |
+          npm install -g @home-assistant/cli
+          npm install -g yaml-lint
+
+      # YAML Linting
+      - name: Lint YAML files
+        run: |
+          yamllint --config-data "{extends: default, rules: {line-length: {max: 120}, indentation: {spaces: 2}}}" \
+            config.yaml build.yaml .github/workflows/ translations/
+
+      # JSON Linting
+      - name: Lint JSON files
+        run: |
+          find . -name "*.json" -not -path "./node_modules/*" -not -path "./.git/*" | xargs -I {} sh -c 'echo "Checking {}" && python -m json.tool {} > /dev/null'
+
+      # Home Assistant Add-on Linting
+      - name: Lint Home Assistant Add-on
+        uses: frenck/action-addon-linter@v2.15
+        with:
+          community: true
+          path: "./"
+
+      # Dockerfile Linting
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ./Dockerfile
+          failure-threshold: warning
+          ignore: DL3008,DL3009
+
+      # Shell Script Linting
+      - name: Lint shell scripts
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          additional_files: 'rootfs'
+          ignore_paths: 'node_modules'
+
+      # Python Code Quality
+      - name: Check Python code quality
+        run: |
+          # Check installation scripts
+          python -m py_compile install.py
+          black --check --diff install.py
+          isort --check-only --diff install.py
+          flake8 install.py --max-line-length=120
+          pylint install.py --disable=C0114,C0116 || true
+
+          # Check test files
+          if [ -d "tests" ]; then
+            python -m py_compile tests/*.py
+            black --check --diff tests/
+            isort --check-only --diff tests/
+            flake8 tests/ --max-line-length=120
+          fi
+
+      # Security Linting
+      - name: Security lint Python files
+        run: |
+          bandit -r . -f json -o bandit-report.json || true
+          if [ -f bandit-report.json ]; then
+            python -c "
+            import json
+            with open('bandit-report.json') as f:
+                report = json.load(f)
+            if report.get('results'):
+                print('Security issues found:')
+                for issue in report['results']:
+                    print(f\"- {issue['test_name']}: {issue['issue_text']}\")
+                exit(1)
+            "
+          fi
+
+      # Check for secrets
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+  # Configuration validation
+  config-validation:
+    name: Configuration validation
+    runs-on: ubuntu-latest
+    needs: preflight
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install PyYAML jsonschema
+
+      - name: Validate add-on configuration
+        run: |
+          python -c "
+          import yaml
+          import sys
+          
+          # Load configuration
+          with open('config.yaml', 'r') as f:
+              config = yaml.safe_load(f)
+          
+          # Basic validation
+          required_fields = ['name', 'version', 'slug', 'description', 'arch', 'startup']
+          for field in required_fields:
+              if field not in config:
+                  print(f'ERROR: Missing required field: {field}')
+                  sys.exit(1)
+          
+          # Validate architectures
+          valid_archs = ['aarch64', 'amd64', 'armhf', 'armv7', 'i386']
+          for arch in config.get('arch', []):
+              if arch not in valid_archs:
+                  print(f'ERROR: Invalid architecture: {arch}')
+                  sys.exit(1)
+          
+          print('✅ Add-on configuration is valid')
+          "
+
+      - name: Validate build configuration
+        run: |
+          python -c "
+          import yaml
+          import sys
+          
+          # Load configurations
+          with open('config.yaml', 'r') as f:
+              config = yaml.safe_load(f)
+          with open('build.yaml', 'r') as f:
+              build_config = yaml.safe_load(f)
+          
+          # Validate build_from
+          if 'build_from' not in build_config:
+              print('ERROR: Missing build_from in build.yaml')
+              sys.exit(1)
+          
+          # Check all architectures have base images
+          for arch in config.get('arch', []):
+              if arch not in build_config['build_from']:
+                  print(f'ERROR: Missing base image for {arch}')
+                  sys.exit(1)
+          
+          print('✅ Build configuration is valid')
+          "
+
+      - name: Validate translations
+        run: |
+          python -c "
+          import yaml
+          import sys
+          
+          # Load configurations
+          with open('config.yaml', 'r') as f:
+              config = yaml.safe_load(f)
+          
+          # Check translations exist
+          translation_file = 'translations/en.yaml'
+          try:
+              with open(translation_file, 'r') as f:
+                  translations = yaml.safe_load(f)
+          except FileNotFoundError:
+              print(f'ERROR: Translation file {translation_file} not found')
+              sys.exit(1)
+          
+          # Validate translation structure
+          if 'configuration' not in translations:
+              print('ERROR: Missing configuration section in translations')
+              sys.exit(1)
+          
+          # Check all options have translations
+          options = config.get('options', {})
+          config_translations = translations['configuration']
+          
+          for option in options:
+              if option not in config_translations:
+                  print(f'WARNING: Missing translation for option: {option}')
+          
+          print('✅ Translations are valid')
+          "
+
+  # Unit tests
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    needs: [preflight, lint]
+    if: needs.preflight.outputs.should_run_tests == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .devcontainer/requirements.txt
+
+      - name: Run unit tests
+        run: |
+          pytest tests/ \
+            -v \
+            -m "not integration and not docker and not slow" \
+            --tb=short \
+            --cov=. \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junit-xml=test-results.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: |
+            test-results.xml
+            htmlcov/
+            coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: unit-tests
+
+  # Build tests
+  build-tests:
+    name: Build tests
+    runs-on: ubuntu-latest
+    needs: [preflight, lint]
+    strategy:
+      matrix:
+        arch: [amd64, aarch64, armv7]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build for ${{ matrix.arch }}
+        run: |
+          docker buildx build \
+            --platform linux/${{ matrix.arch == 'amd64' && 'amd64' || matrix.arch == 'aarch64' && 'arm64' || 'arm/v7' }} \
+            --build-arg BUILD_ARCH=${{ matrix.arch }} \
+            --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --build-arg BUILD_REF="${{ github.sha }}" \
+            --build-arg BUILD_VERSION="${{ needs.preflight.outputs.addon_version }}" \
+            --tag komodo-periphery:${{ matrix.arch }}-test \
+            --load \
+            .
+
+      - name: Test image
+        if: matrix.arch == 'amd64'
+        run: |
+          # Test that the image can start
+          docker run --rm --entrypoint="" komodo-periphery:${{ matrix.arch }}-test \
+            sh -c "echo 'Image test successful'"
+          
+          # Test that periphery binary exists
+          docker run --rm --entrypoint="" komodo-periphery:${{ matrix.arch }}-test \
+            sh -c "which periphery && periphery --version"
+
+      - name: Scan image for vulnerabilities
+        if: matrix.arch == 'amd64'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'komodo-periphery:${{ matrix.arch }}-test'
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.arch }}.sarif'
+
+      - name: Upload Trivy scan results
+        if: matrix.arch == 'amd64'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.arch }}.sarif'
+          category: 'trivy-${{ matrix.arch }}'
+
+  # Integration tests
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    needs: [preflight, unit-tests, build-tests]
+    if: |
+      (needs.preflight.outputs.should_run_integration == 'true' || 
+       github.event.inputs.run_integration_tests == 'true') &&
+      github.event_name != 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .devcontainer/requirements.txt
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        run: |
+          docker buildx build \
+            --build-arg BUILD_ARCH=amd64 \
+            --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --build-arg BUILD_REF="${{ github.sha }}" \
+            --build-arg BUILD_VERSION="${{ needs.preflight.outputs.addon_version }}" \
+            --tag komodo-periphery:test \
+            --load \
+            .
+
+      - name: Run integration tests
+        run: |
+          pytest tests/ \
+            -v \
+            -m "integration" \
+            --tb=short \
+            --junit-xml=integration-test-results.xml \
+            --timeout=300
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: integration-test-results.xml
+
+  # Installation script tests
+  installation-tests:
+    name: Installation script tests
+    runs-on: ${{ matrix.os }}
+    needs: preflight
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.11"]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Test Python installer
+        run: |
+          python install.py --help
+          python -m py_compile install.py
+
+      - name: Test Bash installer (Unix only)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x install.sh
+          bash -n install.sh
+          ./install.sh --help
+
+      - name: Test PowerShell installer (Windows only)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          try {
+            .\install.ps1 -Help
+            Write-Host "PowerShell installer test passed"
+          } catch {
+            Write-Error "PowerShell installer test failed: $_"
+            exit 1
+          }
+
+  # Security tests
+  security-tests:
+    name: Security tests
+    runs-on: ubuntu-latest
+    needs: [preflight, build-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build security test image
+        run: |
+          docker buildx build \
+            --build-arg BUILD_ARCH=amd64 \
+            --tag komodo-periphery:security-test \
+            --load \
+            .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'komodo-periphery:security-test'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Test container security
+        run: |
+          # Test non-root user
+          USER_ID=$(docker run --rm komodo-periphery:security-test id -u)
+          if [ "$USER_ID" = "0" ]; then
+            echo "ERROR: Container runs as root"
+            exit 1
+          else
+            echo "✅ Container runs as non-root user (UID: $USER_ID)"
+          fi
+          
+          # Test read-only filesystem capability
+          docker run --rm --read-only komodo-periphery:security-test \
+            sh -c "echo 'Read-only filesystem test passed'" || {
+            echo "WARNING: Container may not support read-only filesystem"
+          }
+
+  # Performance tests
+  performance-tests:
+    name: Performance tests
+    runs-on: ubuntu-latest
+    needs: [preflight, build-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build performance test image
+        run: |
+          docker buildx build \
+            --build-arg BUILD_ARCH=amd64 \
+            --tag komodo-periphery:perf-test \
+            --load \
+            .
+
+      - name: Test startup time
+        run: |
+          # Measure container startup time
+          start_time=$(date +%s.%N)
+          
+          CONTAINER_ID=$(docker run -d \
+            --env KOMODO_ADDRESS="https://test.example.com" \
+            --env KOMODO_API_KEY="test-key" \
+            --env KOMODO_API_SECRET="test-secret" \
+            komodo-periphery:perf-test)
+          
+          # Wait for container to be ready
+          timeout=30
+          while [ $timeout -gt 0 ]; do
+            if [ "$(docker inspect -f '{{.State.Running}}' $CONTAINER_ID)" = "true" ]; then
+              break
+            fi
+            sleep 1
+            timeout=$((timeout - 1))
+          done
+          
+          end_time=$(date +%s.%N)
+          startup_time=$(echo "$end_time - $start_time" | bc)
+          
+          echo "Startup time: ${startup_time}s"
+          
+          # Cleanup
+          docker stop $CONTAINER_ID
+          docker rm $CONTAINER_ID
+          
+          # Fail if startup takes more than 30 seconds
+          if (( $(echo "$startup_time > 30" | bc -l) )); then
+            echo "ERROR: Startup time too slow: ${startup_time}s"
+            exit 1
+          fi
+
+      - name: Test resource usage
+        run: |
+          # Start container and monitor resource usage
+          CONTAINER_ID=$(docker run -d \
+            --env KOMODO_ADDRESS="https://test.example.com" \
+            --env KOMODO_API_KEY="test-key" \
+            --env KOMODO_API_SECRET="test-secret" \
+            komodo-periphery:perf-test)
+          
+          # Wait for stabilization
+          sleep 30
+          
+          # Get memory usage
+          MEMORY_USAGE=$(docker stats --no-stream --format "{{.MemUsage}}" $CONTAINER_ID)
+          echo "Memory usage: $MEMORY_USAGE"
+          
+          # Cleanup
+          docker stop $CONTAINER_ID
+          docker rm $CONTAINER_ID
+
+  # Summary
+  test-summary:
+    name: Test summary
+    runs-on: ubuntu-latest
+    needs: 
+      - preflight
+      - lint
+      - config-validation
+      - unit-tests
+      - build-tests
+      - installation-tests
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Pre-flight | ${{ needs.preflight.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Config Validation | ${{ needs.config-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Tests | ${{ needs.build-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Installation Tests | ${{ needs.installation-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if any required job failed
+          if [[ "${{ needs.preflight.result }}" != "success" ]] || \
+             [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.config-validation.result }}" != "success" ]] || \
+             [[ "${{ needs.unit-tests.result }}" == "failure" ]] || \
+             [[ "${{ needs.build-tests.result }}" != "success" ]] || \
+             [[ "${{ needs.installation-tests.result }}" != "success" ]]; then
+            echo "❌ One or more critical tests failed"
+            echo "## ❌ CI Failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ All critical tests passed"
+            echo "## ✅ CI Passed" >> $GITHUB_STEP_SUMMARY
+          fi

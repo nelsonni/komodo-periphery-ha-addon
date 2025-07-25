@@ -1,0 +1,423 @@
+name: Test
+
+# Test workflow for Komodo Periphery Add-on
+# Validates configuration, tests builds, and runs integration tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DEFAULT_PYTHON: "3.11"
+
+jobs:
+  information:
+    name: Gather add-on information
+    runs-on: ubuntu-latest
+    outputs:
+      architectures: ${{ steps.information.outputs.architectures }}
+      build: ${{ steps.information.outputs.build }}
+      description: ${{ steps.information.outputs.description }}
+      name: ${{ steps.information.outputs.name }}
+      slug: ${{ steps.information.outputs.slug }}
+      target: ${{ steps.information.outputs.target }}
+      version: ${{ steps.information.outputs.version }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Gather information
+        id: information
+        uses: home-assistant/actions/helpers/info@master
+
+  lint-addon:
+    name: Lint add-on
+    runs-on: ubuntu-latest
+    needs: information
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run Home Assistant Add-on Lint
+        uses: frenck/action-addon-linter@v2.15
+        with:
+          community: true
+          path: "./."
+
+  lint-hadolint:
+    name: Lint Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ./Dockerfile
+          failure-threshold: warning
+
+  lint-json:
+    name: Lint JSON files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5.0.0
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema
+
+      - name: Validate JSON files
+        run: |
+          # Validate config.yaml structure
+          python -c "
+          import yaml
+          import json
+          with open('config.yaml', 'r') as f:
+              config = yaml.safe_load(f)
+          print('config.yaml is valid YAML')
+          print(json.dumps(config, indent=2))
+          "
+
+  lint-yaml:
+    name: Lint YAML files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5.0.0
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yamllint
+
+      - name: Run yamllint
+        run: |
+          yamllint --config-data "{extends: default, rules: {line-length: {max: 120}}}" \
+            config.yaml build.yaml .github/workflows/
+
+  lint-shellcheck:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          additional_files: 'rootfs'
+
+  test-build:
+    name: Test build
+    runs-on: ubuntu-latest
+    needs: [information, lint-addon, lint-hadolint]
+    strategy:
+      matrix:
+        arch: ["amd64"]  # Test build on one architecture
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Test build
+        run: |
+          docker buildx build \
+            --platform linux/${{ matrix.arch == 'amd64' && 'amd64' || matrix.arch == 'i386' && '386' || matrix.arch }} \
+            --build-arg BUILD_ARCH=${{ matrix.arch }} \
+            --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --build-arg BUILD_REF="${{ github.sha }}" \
+            --build-arg BUILD_VERSION="test" \
+            --tag local/komodo-periphery:${{ matrix.arch }} \
+            --load \
+            .
+
+      - name: Test image
+        run: |
+          # Test that the image can start
+          docker run --rm --entrypoint="" local/komodo-periphery:${{ matrix.arch }} \
+            sh -c "echo 'Container starts successfully'"
+          
+          # Test that periphery binary exists and is executable
+          docker run --rm --entrypoint="" local/komodo-periphery:${{ matrix.arch }} \
+            sh -c "which periphery && periphery --version"
+
+  test-installation-scripts:
+    name: Test installation scripts
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5.0.0
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+
+      - name: Test Python installer syntax
+        run: python -m py_compile install.py
+
+      - name: Test Python installer help
+        run: python install.py --help
+
+      - name: Test Bash installer syntax (Unix only)
+        if: runner.os != 'Windows'
+        run: bash -n install.sh
+
+      - name: Test PowerShell installer syntax (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          powershell -Command "
+          try {
+            . .\install.ps1 -Help
+            Write-Host 'PowerShell script syntax OK'
+          } catch {
+            Write-Error 'PowerShell script syntax error: $_'
+            exit 1
+          }"
+
+  test-config-validation:
+    name: Test configuration validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5.0.0
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml jsonschema
+
+      - name: Validate configuration schema
+        run: |
+          python -c "
+          import yaml
+          import sys
+          
+          # Load and validate config.yaml
+          try:
+              with open('config.yaml', 'r') as f:
+                  config = yaml.safe_load(f)
+              
+              # Check required fields
+              required_fields = ['name', 'version', 'slug', 'description', 'arch', 'startup']
+              for field in required_fields:
+                  if field not in config:
+                      print(f'Missing required field: {field}')
+                      sys.exit(1)
+              
+              # Validate architectures
+              valid_archs = ['aarch64', 'amd64', 'armhf', 'armv7', 'i386']
+              for arch in config.get('arch', []):
+                  if arch not in valid_archs:
+                      print(f'Invalid architecture: {arch}')
+                      sys.exit(1)
+              
+              print('Configuration validation passed')
+              
+          except Exception as e:
+              print(f'Configuration validation failed: {e}')
+              sys.exit(1)
+          "
+
+      - name: Validate build configuration
+        run: |
+          python -c "
+          import yaml
+          import sys
+          
+          try:
+              with open('build.yaml', 'r') as f:
+                  build_config = yaml.safe_load(f)
+              
+              # Check build_from section
+              if 'build_from' not in build_config:
+                  print('Missing build_from section')
+                  sys.exit(1)
+              
+              # Validate that all architectures have base images
+              with open('config.yaml', 'r') as f:
+                  config = yaml.safe_load(f)
+              
+              for arch in config.get('arch', []):
+                  if arch not in build_config['build_from']:
+                      print(f'Missing base image for architecture: {arch}')
+                      sys.exit(1)
+              
+              print('Build configuration validation passed')
+              
+          except Exception as e:
+              print(f'Build configuration validation failed: {e}')
+              sys.exit(1)
+          "
+
+  test-integration:
+    name: Integration test
+    runs-on: ubuntu-latest
+    needs: [test-build]
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Build and load to local registry
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg BUILD_ARCH=amd64 \
+            --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --build-arg BUILD_REF="${{ github.sha }}" \
+            --build-arg BUILD_VERSION="test" \
+            --tag localhost:5000/komodo-periphery:test \
+            --push \
+            .
+
+      - name: Test container startup
+        run: |
+          # Test basic container functionality
+          docker run --rm --name komodo-periphery-test \
+            --env KOMODO_ADDRESS="https://test.example.com" \
+            --env KOMODO_API_KEY="test-key" \
+            --env KOMODO_API_SECRET="test-secret" \
+            --entrypoint="" \
+            localhost:5000/komodo-periphery:test \
+            sh -c "
+              echo 'Testing container environment...'
+              echo 'Komodo binary location:'
+              which periphery
+              echo 'Komodo binary version:'
+              periphery --version || echo 'Version check failed (expected in test)'
+              echo 'Environment variables:'
+              env | grep KOMODO || echo 'No KOMODO env vars set'
+              echo 'File permissions:'
+              ls -la /usr/local/bin/periphery
+              echo 'Container test completed successfully'
+            "
+
+  test-security:
+    name: Security test
+    runs-on: ubuntu-latest
+    needs: [test-build]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg BUILD_ARCH=amd64 \
+            --tag test/komodo-periphery:security \
+            --load \
+            .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'test/komodo-periphery:security'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Test non-root user
+        run: |
+          # Verify container runs as non-root user
+          USER_ID=$(docker run --rm test/komodo-periphery:security id -u)
+          if [ "$USER_ID" = "0" ]; then
+            echo "ERROR: Container is running as root user"
+            exit 1
+          else
+            echo "PASS: Container is running as non-root user (UID: $USER_ID)"
+          fi
+
+  summary:
+    name: Test summary
+    runs-on: ubuntu-latest
+    needs: 
+      - information
+      - lint-addon
+      - lint-hadolint
+      - lint-json
+      - lint-yaml
+      - lint-shellcheck
+      - test-build
+      - test-installation-scripts
+      - test-config-validation
+      - test-integration
+      - test-security
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Test Results Summary:"
+          echo "===================="
+          echo "Information: ${{ needs.information.result }}"
+          echo "Lint Add-on: ${{ needs.lint-addon.result }}"
+          echo "Lint Dockerfile: ${{ needs.lint-hadolint.result }}"
+          echo "Lint JSON: ${{ needs.lint-json.result }}"
+          echo "Lint YAML: ${{ needs.lint-yaml.result }}"
+          echo "Lint Shell: ${{ needs.lint-shellcheck.result }}"
+          echo "Test Build: ${{ needs.test-build.result }}"
+          echo "Test Install Scripts: ${{ needs.test-installation-scripts.result }}"
+          echo "Test Config: ${{ needs.test-config-validation.result }}"
+          echo "Test Integration: ${{ needs.test-integration.result }}"
+          echo "Test Security: ${{ needs.test-security.result }}"
+          
+          # Check if any job failed
+          if [[ "${{ needs.information.result }}" != "success" ]] || \
+             [[ "${{ needs.lint-addon.result }}" != "success" ]] || \
+             [[ "${{ needs.lint-hadolint.result }}" != "success" ]] || \
+             [[ "${{ needs.lint-json.result }}" != "success" ]] || \
+             [[ "${{ needs.lint-yaml.result }}" != "success" ]] || \
+             [[ "${{ needs.lint-shellcheck.result }}" != "success" ]] || \
+             [[ "${{ needs.test-build.result }}" != "success" ]] || \
+             [[ "${{ needs.test-installation-scripts.result }}" != "success" ]] || \
+             [[ "${{ needs.test-config-validation.result }}" != "success" ]] || \
+             [[ "${{ needs.test-integration.result }}" != "success" ]] || \
+             [[ "${{ needs.test-security.result }}" != "success" ]]; then
+            echo "❌ One or more tests failed"
+            exit 1
+          else
+            echo "✅ All tests passed successfully"
+          fi

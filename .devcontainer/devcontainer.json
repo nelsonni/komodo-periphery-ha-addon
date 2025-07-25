@@ -1,0 +1,186 @@
+{
+  "name": "Home Assistant Add-on Development - Komodo Periphery",
+  "image": "ghcr.io/home-assistant/devcontainer:addons",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true",
+      "moby": "true",
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": "false",
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": "true",
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installTools": "true"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18",
+      "nodeGypDependencies": "true"
+    }
+  },
+
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-vscode.vscode-docker",
+        "esbenp.prettier-vscode",
+        "ms-python.python",
+        "ms-python.pylint",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        "timonwong.shellcheck",
+        "foxundermoon.shell-format",
+        "tamasfe.even-better-toml",
+        "GitHub.vscode-github-actions",
+        "github.vscode-pull-request-github",
+        "ms-vscode.makefile-tools",
+        "ms-azuretools.vscode-docker",
+        "streetsidesoftware.code-spell-checker",
+        "editorconfig.editorconfig"
+      ],
+      
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "icon": "terminal-bash"
+          }
+        },
+        
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": false,
+        "editor.formatOnType": false,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true,
+          "source.fixAll": true
+        },
+        
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+        
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.linting.flake8Enabled": true,
+        "python.analysis.typeCheckingMode": "basic",
+        
+        "yaml.schemas": {
+          "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yaml",
+          "https://json.schemastore.org/github-action.json": ".github/actions/*/action.yaml"
+        },
+        "yaml.format.enable": true,
+        "yaml.validate": true,
+        
+        "json.format.enable": true,
+        "json.validate.enable": true,
+        
+        "docker.dockerodeOptions": {
+          "socketPath": "/var/run/docker.sock"
+        },
+        
+        "shellcheck.enable": true,
+        "shellcheck.run": "onSave",
+        
+        "makefile.configureOnOpen": true,
+        
+        "git.autofetch": true,
+        "git.enableSmartCommit": true,
+        
+        "cSpell.words": [
+          "komodo",
+          "periphery",
+          "addons",
+          "homeassistant",
+          "dockerode",
+          "bashio",
+          "templio",
+          "aarch",
+          "armhf",
+          "armv7",
+          "ghcr"
+        ]
+      }
+    }
+  },
+
+  "postCreateCommand": [
+    "bash",
+    "-c", 
+    "echo 'Setting up development environment...' && chmod +x .devcontainer/install-dev-tools.sh && python3 -m pip install --upgrade pip setuptools wheel --user && echo 'Installing minimal requirements...' && pip3 install -r .devcontainer/requirements-minimal.txt --user && echo 'Installing full requirements...' && pip3 install -r .devcontainer/requirements.txt --user --prefer-binary || echo 'Some packages failed to install, continuing...' && ./.devcontainer/install-dev-tools.sh && echo 'Development environment setup complete!'"
+  ],
+
+  "postStartCommand": [
+    "bash",
+    "-c",
+    "git config --global --add safe.directory ${containerWorkspaceFolder} && git config --global init.defaultBranch main && if command -v make >/dev/null 2>&1; then make info; else echo 'Make not available, skipping info'; fi"
+  ],
+
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+
+  "forwardPorts": [8120, 4357, 9120],
+  "portsAttributes": {
+    "8120": {
+      "label": "Komodo Periphery API",
+      "protocol": "https"
+    },
+    "4357": {
+      "label": "Home Assistant Supervisor",
+      "protocol": "http"
+    },
+    "9120": {
+      "label": "Komodo Core (Mock)",
+      "protocol": "http"
+    }
+  },
+
+  "secrets": {
+    "KOMODO_API_KEY": {
+      "description": "Komodo API Key for development testing"
+    },
+    "KOMODO_API_SECRET": {
+      "description": "Komodo API Secret for development testing"
+    }
+  },
+
+  "containerEnv": {
+    "WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
+    "ADDON_NAME": "komodo-periphery",
+    "ADDON_SLUG": "komodo_periphery",
+    "PYTHONPATH": "${containerWorkspaceFolder}/.devcontainer/scripts:${containerWorkspaceFolder}/tests"
+  },
+
+  "initializeCommand": [
+    "bash",
+    "-c",
+    "mkdir -p .devcontainer/cache && echo 'Initializing devcontainer...'"
+  ],
+
+  "updateContentCommand": [
+    "bash", 
+    "-c",
+    "git pull origin main || true"
+  ],
+
+  "onCreateCommand": {
+    "setup-git": "git config --global init.defaultBranch main && git config --global --add safe.directory ${containerWorkspaceFolder}"
+  }
+}

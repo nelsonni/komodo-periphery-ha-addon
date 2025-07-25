@@ -1,0 +1,146 @@
+# Docker Compose for local development and testing
+# Komodo Periphery Home Assistant Add-on
+
+version: '3.8'
+
+services:
+  # Komodo Periphery service for development
+  komodo-periphery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_ARCH: amd64
+        BUILD_DATE: "2025-01-01T00:00:00Z"
+        BUILD_REF: "dev"
+        BUILD_VERSION: "dev"
+        KOMODO_VERSION: "latest"
+    container_name: komodo-periphery-dev
+    image: komodo-periphery:dev
+    restart: unless-stopped
+    
+    # Environment variables for development
+    environment:
+      - KOMODO_ADDRESS=${KOMODO_ADDRESS:-https://demo.komo.do}
+      - KOMODO_API_KEY=${KOMODO_API_KEY:-demo-key}
+      - KOMODO_API_SECRET=${KOMODO_API_SECRET:-demo-secret}
+      - PERIPHERY_LOG_LEVEL=${LOG_LEVEL:-debug}
+      - PERIPHERY_STATS_POLLING_RATE=${STATS_POLLING_RATE:-5-sec}
+      - PERIPHERY_CONTAINER_STATS_POLLING_RATE=${CONTAINER_STATS_POLLING_RATE:-1-min}
+      - PERIPHERY_SSL_ENABLED=${SSL_ENABLED:-true}
+      - PERIPHERY_PORT=${PERIPHERY_PORT:-8120}
+    
+    # Ports
+    ports:
+      - "${PERIPHERY_PORT:-8120}:8120"
+    
+    # Volumes for development
+    volumes:
+      # Configuration directory
+      - ./dev-data/config:/data/config
+      - ./dev-data/ssl:/data/ssl
+      
+      # Docker socket access for container management
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # Mount source code for development (optional)
+      - ./rootfs:/rootfs:ro
+    
+    # Networking
+    networks:
+      - komodo-dev
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8120/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits for development
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    
+    # Security context
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN  # Required for system monitoring
+
+  # Mock Komodo Core for testing (optional)
+  komodo-core-mock:
+    image: nginx:alpine
+    container_name: komodo-core-mock
+    ports:
+      - "9120:80"
+    volumes:
+      - ./dev-tools/mock-server/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./dev-tools/mock-server/html:/usr/share/nginx/html:ro
+    networks:
+      - komodo-dev
+    profiles:
+      - mock
+    depends_on:
+      - komodo-periphery
+
+  # Development tools container
+  dev-tools:
+    build:
+      context: ./dev-tools
+      dockerfile: Dockerfile.dev-tools
+    container_name: komodo-dev-tools
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    working_dir: /workspace
+    networks:
+      - komodo-dev
+    profiles:
+      - tools
+    command: sleep infinity
+
+  # Home Assistant Supervisor simulator (for testing)
+  ha-supervisor:
+    image: ghcr.io/home-assistant/supervisor:latest
+    container_name: ha-supervisor-dev
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./dev-data/supervisor:/data
+      - ./:/data/addons/local/komodo_periphery:ro
+    environment:
+      - SUPERVISOR_SHARE=/data
+      - SUPERVISOR_NAME=supervisor
+    networks:
+      - komodo-dev
+    profiles:
+      - supervisor
+    ports:
+      - "4357:4357"
+
+# Networks
+networks:
+  komodo-dev:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volumes for persistent development data
+volumes:
+  dev-config:
+    driver: local
+  dev-ssl:
+    driver: local
+  dev-supervisor:
+    driver: local

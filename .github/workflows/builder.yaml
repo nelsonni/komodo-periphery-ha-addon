@@ -1,0 +1,294 @@
+name: Builder
+
+# Environment variables for the build
+env:
+  BUILD_ARGS: "--test"
+  MONITORED_FILES: "build.yaml config.yaml Dockerfile rootfs"
+
+# Trigger conditions
+on:
+  schedule:
+    - cron: "0 2 * * 0"  # Weekly builds on Sunday at 2 AM UTC
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "build.yaml"
+      - "config.yaml" 
+      - "Dockerfile"
+      - "rootfs/**"
+      - ".github/workflows/builder.yaml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "build.yaml"
+      - "config.yaml"
+      - "Dockerfile" 
+      - "rootfs/**"
+      - ".github/workflows/builder.yaml"
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build all architectures'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    name: Initialize builds
+    outputs:
+      changed_addons: ${{ steps.changed_addons.outputs.addons }}
+      changed: ${{ steps.changed_addons.outputs.changed }}
+      architectures: ${{ steps.info.outputs.architectures }}
+      version: ${{ steps.info.outputs.version }}
+      slug: ${{ steps.info.outputs.slug }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed_files
+        uses: jitterbit/get-changed-files@v1
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+
+      - name: Find add-on directories
+        id: changed_addons
+        run: |
+          declare -a changed_addons
+          
+          # Force build if scheduled, workflow_dispatch, or force_build is true
+          if [[ "${{ github.event_name }}" == "schedule" ]] || \
+             [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
+             [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
+            changed_addons+=("komodo_periphery")
+          else
+            # Check for changed files
+            for file in ${{ steps.changed_files.outputs.all }}; do
+              if [[ $file =~ $MONITORED_FILES ]]; then
+                changed_addons+=("komodo_periphery")
+                break
+              fi
+            done
+          fi
+          
+          changed=$(printf "%s\n" "${changed_addons[@]}" | jq -R -s -c 'split("\n")[:-1]')
+          echo "changed=$([[ ${#changed_addons[@]} -gt 0 ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          echo "addons=$changed" >> $GITHUB_OUTPUT
+
+      - name: Get add-on information
+        id: info
+        uses: home-assistant/actions/helpers/info@master
+        if: steps.changed_addons.outputs.changed == 'true'
+        with:
+          path: "./."
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint add-on
+    needs: init
+    if: needs.init.outputs.changed == 'true'
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Run Home Assistant Add-on Lint
+        uses: frenck/action-addon-linter@v2.15
+        with:
+          community: true
+          path: "./."
+
+  build:
+    runs-on: ubuntu-latest
+    name: Build ${{ matrix.arch }} add-on
+    needs: 
+      - init
+      - lint
+    if: needs.init.outputs.changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ["aarch64", "amd64", "armhf", "armv7", "i386"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Get information
+        id: info
+        uses: home-assistant/actions/helpers/info@master
+        with:
+          path: "./."
+
+      - name: Check if add-on should be built
+        id: check
+        run: |
+          if [[ "${{ steps.info.outputs.architectures }}" =~ ${{ matrix.arch }} ]]; then
+             echo "build_arch=true" >> $GITHUB_OUTPUT
+             echo "image=$(echo ${{ steps.info.outputs.image }} | cut -d'/' -f3)" >> $GITHUB_OUTPUT
+             if [[ -z "${{ github.head_ref }}" ]] && [[ "${{ github.event_name }}" == "push" ]]; then
+                 echo "BUILD_ARGS=" >> $GITHUB_ENV
+             fi
+           else
+             echo "${{ matrix.arch }} is not a valid architecture for this add-on, skipping build"
+             echo "build_arch=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU
+        if: steps.check.outputs.build_arch == 'true'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.build_arch == 'true'
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          driver-opts: |
+            image=moby/buildkit:latest
+
+      - name: Login to GitHub Container Registry
+        if: steps.check.outputs.build_arch == 'true' && env.BUILD_ARGS != '--test'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build ${{ matrix.arch }} add-on
+        if: steps.check.outputs.build_arch == 'true'
+        uses: home-assistant/builder@2024.03.5
+        with:
+          args: |
+            ${{ env.BUILD_ARGS }} \
+            --${{ matrix.arch }} \
+            --target /data \
+            --image "${{ steps.check.outputs.image }}" \
+            --docker-hub "ghcr.io/${{ github.repository_owner }}" \
+            --addon
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security scan
+    needs: 
+      - init
+      - build
+    if: needs.init.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        arch: ["amd64"]  # Only scan one architecture for security
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Get information
+        id: info
+        uses: home-assistant/actions/helpers/info@master
+        with:
+          path: "./."
+
+      - name: Build local image for security scan
+        run: |
+          docker build \
+            --build-arg BUILD_ARCH=${{ matrix.arch }} \
+            --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --build-arg BUILD_REF="${{ github.sha }}" \
+            --build-arg BUILD_VERSION="${{ needs.init.outputs.version }}" \
+            -t local/komodo-periphery:${{ matrix.arch }} .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'local/komodo-periphery:${{ matrix.arch }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish add-on
+    needs: 
+      - init
+      - build
+    if: needs.init.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish
+        uses: home-assistant/builder@2024.03.5
+        with:
+          args: |
+            --all \
+            --target /data \
+            --docker-hub "ghcr.io/${{ github.repository_owner }}" \
+            --addon
+
+      - name: Create release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: |
+            README.md
+            CHANGELOG.md
+
+  notification:
+    runs-on: ubuntu-latest
+    name: Send notification
+    needs: 
+      - init
+      - build
+      - publish
+    if: always() && needs.init.outputs.changed == 'true'
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [[ "${{ needs.build.result }}" == "success" && "${{ needs.publish.result }}" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=✅ Komodo Periphery add-on build completed successfully" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Komodo Periphery add-on build failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Discord notification
+        if: env.DISCORD_WEBHOOK != ''
+        uses: sarisia/actions-status-discord@v1
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          status: ${{ steps.status.outputs.status }}
+          title: "Komodo Periphery Add-on Build"
+          description: ${{ steps.status.outputs.message }}
+          color: ${{ steps.status.outputs.status == 'success' && '0x00ff00' || '0xff0000' }}
+          url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send Slack notification
+        if: env.SLACK_WEBHOOK != ''
+        uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        with:
+          status: ${{ steps.status.outputs.status }}
+          text: ${{ steps.status.outputs.message }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}

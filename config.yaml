@@ -1,0 +1,61 @@
+name: Komodo Periphery
+version: "1.0.0"
+slug: komodo_periphery
+description: Komodo Periphery agent for monitoring Home Assistant OS system metrics
+url: https://github.com/moghtech/komodo
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+startup: services
+boot: auto
+init: false
+map:
+  - "ssl:rw"
+  - "addons_config:rw"
+ports:
+  8120/tcp: 8120
+ports_description:
+  8120/tcp: Komodo Periphery API port
+options:
+  komodo_address: ""
+  komodo_api_key: ""
+  komodo_api_secret: ""
+  log_level: info
+  stats_polling_rate: "5-sec"
+  container_stats_polling_rate: "1-min"
+  ssl_enabled: true
+  monitor_homeassistant: true
+schema:
+  komodo_address: url
+  komodo_api_key: password
+  komodo_api_secret: password
+  log_level: list(trace|debug|info|warn|error)
+  stats_polling_rate: str
+  container_stats_polling_rate: str
+  ssl_enabled: bool
+  monitor_homeassistant: bool
+  allowed_ips: [str]?
+  passkeys: [password]?
+image: ghcr.io/home-assistant/komodo-periphery-{arch}
+privileged:
+  - SYS_ADMIN
+docker_api: true
+host_network: false
+host_pid: false
+apparmor: true
+devices:
+  - "/dev/fuse"
+environment:
+  KOMODO_ADDRESS: komodo_address
+  KOMODO_API_KEY: komodo_api_key  
+  KOMODO_API_SECRET: komodo_api_secret
+  PERIPHERY_LOG_LEVEL: log_level
+  PERIPHERY_STATS_POLLING_RATE: stats_polling_rate
+  PERIPHERY_CONTAINER_STATS_POLLING_RATE: container_stats_polling_rate
+  PERIPHERY_SSL_ENABLED: ssl_enabled
+services:
+  - mysql:want
+  - mqtt:want

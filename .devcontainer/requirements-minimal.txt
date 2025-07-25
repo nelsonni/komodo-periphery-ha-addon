@@ -1,0 +1,25 @@
+# Minimal requirements for devcontainer setup
+# These packages have pre-built wheels and should install without compilation issues
+
+# Core testing framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# YAML handling (using binary wheel)
+PyYAML>=6.0.1
+
+# Basic utilities
+requests>=2.31.0
+click>=8.1.0
+colorama>=0.4.6
+
+# Docker API
+docker>=6.1.0
+
+# Development tools
+black>=23.7.0
+isort>=5.12.0
+flake8>=6.0.0
+
+# Configuration
+python-dotenv>=1.0.0
