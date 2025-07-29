@@ -45,8 +45,10 @@ safe_curl_install() {
 echo "📦 Updating package lists..."
 safe_apt update
 
-# Install system dependencies
+# Install system dependencies with version awareness
 echo "📦 Installing system packages..."
+# Note: Exact versions depend on the base distribution
+# These are approximate versions for Debian 12 (Bookworm)
 safe_apt install -y \
     curl \
     wget \
@@ -61,6 +63,10 @@ safe_apt install -y \
     git \
     bash \
     bc || echo "⚠️ Some system packages may not have been installed"
+
+# Install shellcheck with specific version if available
+echo "🐚 Installing shellcheck..."
+safe_apt install -y shellcheck=0.9.0-1 || safe_apt install -y shellcheck || echo "⚠️ Could not install shellcheck via apt"
 
 # Install hadolint (Dockerfile linter) - with error handling
 echo "🐳 Installing hadolint..."

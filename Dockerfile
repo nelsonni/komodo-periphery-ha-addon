@@ -1,4 +1,5 @@
-FROM ghcr.io/home-assistant/alpine-base:3.21
+ARG BUILD_FROM=ghcr.io/hassio-addons/base:latest
+FROM ${BUILD_FROM}
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -9,12 +10,15 @@ ENV PERIPHERY_CONFIG_DIR=/data/config
 ENV PERIPHERY_DATA_DIR=/data
 ENV PERIPHERY_SSL_DIR=/data/ssl
 
-# Install required packages
+# Install required packages with pinned versions
+# Note: Update these versions periodically for security patches
+# Check current versions: https://pkgs.alpinelinux.org/packages
+# Or run: apk search <package> to find available versions
 RUN apk add --no-cache \
     curl=8.11.1-r0 \
-    docker-cli=27.4.1-r0 \
-    openssl=3.3.2-r3 \
-    procps=4.0.4-r0 \
+    docker-cli=27.3.1-r2 \
+    openssl=3.3.2-r4 \
+    procps-ng=4.0.4-r0 \
     && rm -rf /var/cache/apk/*
 
 # Create necessary directories
