@@ -1,8 +1,14 @@
 # Home Assistant Add-on Base Image Pattern
 # Uses ARG BUILD_FROM to support multi-architecture builds via build.yaml
+# Default to Alpine if no BUILD_FROM is provided (for testing)
 # hadolint ignore=DL3006
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:latest
+ARG BUILD_FROM=alpine:3.21
 FROM ${BUILD_FROM}
+
+# Install bash first if not already available (needed for SHELL directive)
+RUN if ! command -v bash >/dev/null 2>&1; then \
+        apk add --no-cache bash=5.2.26-r0; \
+    fi
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -13,15 +19,23 @@ ENV PERIPHERY_CONFIG_DIR=/data/config
 ENV PERIPHERY_DATA_DIR=/data
 ENV PERIPHERY_SSL_DIR=/data/ssl
 
-# Install required packages with pinned versions
-# Note: Update these versions periodically for security patches
-# Check current versions: https://pkgs.alpinelinux.org/packages
-# Or run: apk search <package> to find available versions
-RUN apk add --no-cache \
-    curl=8.11.1-r0 \
-    docker-cli=27.3.1-r2 \
-    openssl=3.3.2-r4 \
-    procps-ng=4.0.4-r0 \
+# Install required packages with version fallback strategy
+# Try pinned versions first, fall back to latest if not available
+RUN set -e; \
+    echo "Installing packages with version fallback..."; \
+    apk add --no-cache \
+        curl=8.11.1-r0 \
+        docker-cli=27.3.1-r2 \
+        openssl=3.3.2-r4 \
+        procps-ng=4.0.4-r0 \
+    || { \
+        echo "Pinned versions failed, trying latest versions..."; \
+        apk add --no-cache \
+            curl \
+            docker-cli \
+            openssl \
+            procps-ng; \
+    } \
     && rm -rf /var/cache/apk/*
 
 # Create necessary directories
