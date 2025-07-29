@@ -1,4 +1,3 @@
----
 name: Komodo Periphery
 version: "dev"
 slug: komodo_periphery
@@ -47,7 +46,7 @@ devices:
   - "/dev/fuse"
 environment:
   KOMODO_ADDRESS: komodo_address
-  KOMODO_API_KEY: komodo_api_key
+  KOMODO_API_KEY: komodo_api_key  
   KOMODO_API_SECRET: komodo_api_secret
   PERIPHERY_LOG_LEVEL: log_level
   PERIPHERY_STATS_POLLING_RATE: stats_polling_rate

@@ -213,11 +213,11 @@ jobs:
           cat > Dockerfile.test << 'EOF'
           FROM alpine:3.21
 
-          # Set shell
-          SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-          # Install bash and basic tools
+          # Install bash and basic tools first (using sh)
           RUN apk add --no-cache bash curl
+
+          # Now set shell to bash after it's installed
+          SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
           # Create mock periphery binary for testing
           RUN echo '#!/bin/bash' > /usr/local/bin/periphery && \

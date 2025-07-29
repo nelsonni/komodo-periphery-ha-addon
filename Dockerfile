@@ -1,4 +1,5 @@
-FROM ghcr.io/home-assistant/alpine-base:3.21
+ARG BUILD_FROM
+FROM ${BUILD_FROM}
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -9,14 +10,12 @@ ENV PERIPHERY_CONFIG_DIR=/data/config
 ENV PERIPHERY_DATA_DIR=/data
 ENV PERIPHERY_SSL_DIR=/data/ssl
 
-# Install required packages with version pinning
-# Note: Replace with actual versions available in Alpine 3.21
-# You can check versions by running: docker run --rm alpine:3.21 apk list --available <package>
+# Install required packages
 RUN apk add --no-cache \
-    curl=8.11.1-r0 \
-    docker-cli=27.4.1-r0 \
-    openssl=3.3.2-r3 \
-    procps=4.0.4-r0 \
+    curl \
+    docker-cli \
+    openssl \
+    procps \
     && rm -rf /var/cache/apk/*
 
 # Create necessary directories
