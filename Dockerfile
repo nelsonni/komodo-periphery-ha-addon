@@ -1,3 +1,6 @@
+# Home Assistant Add-on Base Image Pattern
+# Uses ARG BUILD_FROM to support multi-architecture builds via build.yaml
+# hadolint ignore=DL3006
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:latest
 FROM ${BUILD_FROM}
 

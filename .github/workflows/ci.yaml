@@ -193,7 +193,7 @@ jobs:
         with:
           dockerfile: ./Dockerfile
           failure-threshold: warning
-          ignore: DL3008,DL3009
+          config: .hadolint.yaml
 
       # Shell Script Linting
       - name: Lint shell scripts

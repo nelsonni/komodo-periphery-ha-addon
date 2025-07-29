@@ -60,6 +60,7 @@ jobs:
         with:
           dockerfile: ./Dockerfile
           failure-threshold: warning
+          config: .hadolint.yaml
 
   lint-json:
     name: Lint JSON files
