@@ -12,11 +12,11 @@ rules:
   # Relax comment spacing rules to work with Prettier
   comments:
     min-spaces-from-content: 1  # Allow 1 space instead of 2
-    require-starting-space: true
+    require-starting-space: false  # More flexible for inline comments
 
-  # Set reasonable line length
+  # Set reasonable line length with flexibility for GitHub Actions
   line-length:
-    max: 120
+    max: 130  # Slightly higher for GitHub Actions workflows
     allow-non-breakable-words: true
     allow-non-breakable-inline-mappings: true
 
@@ -48,3 +48,6 @@ rules:
   braces:
     min-spaces-inside: 0
     max-spaces-inside: 1
+    
+  # Be more lenient with document separators
+  document-start: disable
