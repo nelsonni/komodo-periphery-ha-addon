@@ -135,7 +135,49 @@ jobs:
       # JSON Linting
       - name: Lint JSON files
         run: |
-          find . -name "*.json" -not -path "./node_modules/*" -not -path "./.git/*" | xargs -I {} sh -c 'echo "Checking {}" && python -m json.tool {} > /dev/null'
+          # Check actual JSON files only
+          find . -name "*.json" -not -path "./node_modules/*" -not -path "./.git/*" | while read -r file; do
+            echo "Validating JSON file: $file"
+            python -m json.tool "$file" > /dev/null || {
+              echo "❌ Invalid JSON in $file"
+              exit 1
+            }
+          done
+          
+          # Validate config.yaml structure (using already installed PyYAML)
+          echo "Validating YAML configuration files..."
+          python -c "
+          import yaml
+          import json
+          
+          # Validate config.yaml
+          try:
+              with open('config.yaml', 'r') as f:
+                  config = yaml.safe_load(f)
+              print('✅ config.yaml is valid YAML')
+              print('Configuration loaded:', json.dumps(config, indent=2, default=str))
+          except Exception as e:
+              print(f'❌ config.yaml validation failed: {e}')
+              exit(1)
+          
+          # Validate build.yaml
+          try:
+              with open('build.yaml', 'r') as f:
+                  build_config = yaml.safe_load(f)
+              print('✅ build.yaml is valid YAML')
+          except Exception as e:
+              print(f'❌ build.yaml validation failed: {e}')
+              exit(1)
+          
+          # Validate translations
+          try:
+              with open('translations/en.yaml', 'r') as f:
+                  translations = yaml.safe_load(f)
+              print('✅ translations/en.yaml is valid YAML')
+          except Exception as e:
+              print(f'❌ translations/en.yaml validation failed: {e}')
+              exit(1)
+          "
 
       # Home Assistant Add-on Linting
       - name: Lint Home Assistant Add-on
