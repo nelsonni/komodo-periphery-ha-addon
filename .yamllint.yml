@@ -1,0 +1,50 @@
+# yamllint configuration for Komodo Periphery Add-on
+# Compatible with Prettier and VS Code formatting
+
+extends: default
+
+rules:
+  # Allow both true/false and yes/no for boolean values
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+  # Relax comment spacing rules to work with Prettier
+  comments:
+    min-spaces-from-content: 1  # Allow 1 space instead of 2
+    require-starting-space: true
+
+  # Set reasonable line length
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+
+  # Allow empty values
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: false
+
+  # Relax indentation rules for complex workflows
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Allow quoted strings
+  quoted-strings:
+    quote-type: any
+    required: false
+
+  # Allow long keys for GitHub Actions
+  key-duplicates: enable
+  
+  # Relax brackets spacing
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Relax braces spacing  
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1

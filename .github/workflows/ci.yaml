@@ -1,4 +1,3 @@
----
 name: Continuous Integration
 
 # Comprehensive CI pipeline for Komodo Periphery Add-on
@@ -12,16 +11,16 @@ on:
   workflow_dispatch:
     inputs:
       run_integration_tests:
-        description: "Run integration tests"
+        description: 'Run integration tests'
         required: false
         default: false
         type: boolean
       target_architecture:
-        description: "Target architecture for testing"
+        description: 'Target architecture for testing'
         required: false
-        default: "amd64"
+        default: 'amd64'
         type: choice
-        options: ["amd64", "aarch64", "armv7", "armhf", "i386"]
+        options: ['amd64', 'aarch64', 'armv7', 'armhf', 'i386']
 
 env:
   PYTHON_VERSION: "3.11"
@@ -92,7 +91,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
+          cache: 'pip'
 
       - name: Install Python dependencies
         run: |
@@ -119,7 +118,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: 'npm'
 
       - name: Install Node.js dependencies
         run: |
@@ -130,8 +129,8 @@ jobs:
       # YAML Linting
       - name: Lint YAML files
         run: |
-          yamllint --config-data "{extends: default, rules: {line-length: {max: 120}, indentation: {spaces: 2}}}" \
-            config.yaml build.yaml .github/workflows/ translations/
+          # Use custom yamllint config that's compatible with Prettier
+          yamllint -c .yamllint.yml config.yaml build.yaml .github/workflows/ translations/
 
       # JSON Linting
       - name: Lint JSON files
@@ -144,13 +143,13 @@ jobs:
               exit 1
             }
           done
-
+          
           # Validate config.yaml structure (using already installed PyYAML)
           echo "Validating YAML configuration files..."
           python -c "
           import yaml
           import json
-
+          
           # Validate config.yaml
           try:
               with open('config.yaml', 'r') as f:
@@ -160,7 +159,7 @@ jobs:
           except Exception as e:
               print(f'❌ config.yaml validation failed: {e}')
               exit(1)
-
+          
           # Validate build.yaml
           try:
               with open('build.yaml', 'r') as f:
@@ -169,7 +168,7 @@ jobs:
           except Exception as e:
               print(f'❌ build.yaml validation failed: {e}')
               exit(1)
-
+          
           # Validate translations
           try:
               with open('translations/en.yaml', 'r') as f:
@@ -199,8 +198,8 @@ jobs:
       - name: Lint shell scripts
         uses: ludeeus/action-shellcheck@2.0.0
         with:
-          additional_files: "rootfs"
-          ignore_paths: "node_modules"
+          additional_files: 'rootfs'
+          ignore_paths: 'node_modules'
 
       # Python Code Quality
       - name: Check Python code quality
@@ -275,25 +274,25 @@ jobs:
           python -c "
           import yaml
           import sys
-
+          
           # Load configuration
           with open('config.yaml', 'r') as f:
               config = yaml.safe_load(f)
-
+          
           # Basic validation
           required_fields = ['name', 'version', 'slug', 'description', 'arch', 'startup']
           for field in required_fields:
               if field not in config:
                   print(f'ERROR: Missing required field: {field}')
                   sys.exit(1)
-
+          
           # Validate architectures
           valid_archs = ['aarch64', 'amd64', 'armhf', 'armv7', 'i386']
           for arch in config.get('arch', []):
               if arch not in valid_archs:
                   print(f'ERROR: Invalid architecture: {arch}')
                   sys.exit(1)
-
+          
           print('✅ Add-on configuration is valid')
           "
 
@@ -302,24 +301,24 @@ jobs:
           python -c "
           import yaml
           import sys
-
+          
           # Load configurations
           with open('config.yaml', 'r') as f:
               config = yaml.safe_load(f)
           with open('build.yaml', 'r') as f:
               build_config = yaml.safe_load(f)
-
+          
           # Validate build_from
           if 'build_from' not in build_config:
               print('ERROR: Missing build_from in build.yaml')
               sys.exit(1)
-
+          
           # Check all architectures have base images
           for arch in config.get('arch', []):
               if arch not in build_config['build_from']:
                   print(f'ERROR: Missing base image for {arch}')
                   sys.exit(1)
-
+          
           print('✅ Build configuration is valid')
           "
 
@@ -328,11 +327,11 @@ jobs:
           python -c "
           import yaml
           import sys
-
+          
           # Load configurations
           with open('config.yaml', 'r') as f:
               config = yaml.safe_load(f)
-
+          
           # Check translations exist
           translation_file = 'translations/en.yaml'
           try:
@@ -341,20 +340,20 @@ jobs:
           except FileNotFoundError:
               print(f'ERROR: Translation file {translation_file} not found')
               sys.exit(1)
-
+          
           # Validate translation structure
           if 'configuration' not in translations:
               print('ERROR: Missing configuration section in translations')
               sys.exit(1)
-
+          
           # Check all options have translations
           options = config.get('options', {})
           config_translations = translations['configuration']
-
+          
           for option in options:
               if option not in config_translations:
                   print(f'WARNING: Missing translation for option: {option}')
-
+          
           print('✅ Translations are valid')
           "
 
@@ -372,7 +371,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -444,7 +443,7 @@ jobs:
           # Test that the image can start
           docker run --rm --entrypoint="" komodo-periphery:${{ matrix.arch }}-test \
             sh -c "echo 'Image test successful'"
-
+          
           # Test that periphery binary exists
           docker run --rm --entrypoint="" komodo-periphery:${{ matrix.arch }}-test \
             sh -c "which periphery && periphery --version"
@@ -453,16 +452,16 @@ jobs:
         if: matrix.arch == 'amd64'
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "komodo-periphery:${{ matrix.arch }}-test"
-          format: "sarif"
-          output: "trivy-results-${{ matrix.arch }}.sarif"
+          image-ref: 'komodo-periphery:${{ matrix.arch }}-test'
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.arch }}.sarif'
 
       - name: Upload Trivy scan results
         if: matrix.arch == 'amd64'
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: "trivy-results-${{ matrix.arch }}.sarif"
-          category: "trivy-${{ matrix.arch }}"
+          sarif_file: 'trivy-results-${{ matrix.arch }}.sarif'
+          category: 'trivy-${{ matrix.arch }}'
 
   # Integration tests
   integration-tests:
@@ -470,7 +469,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [preflight, unit-tests, build-tests]
     if: |
-      (needs.preflight.outputs.should_run_integration == 'true' ||
+      (needs.preflight.outputs.should_run_integration == 'true' || 
        github.event.inputs.run_integration_tests == 'true') &&
       github.event_name != 'pull_request'
     steps:
@@ -481,7 +480,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -585,11 +584,11 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "komodo-periphery:security-test"
-          format: "table"
-          exit-code: "1"
+          image-ref: 'komodo-periphery:security-test'
+          format: 'table'
+          exit-code: '1'
           ignore-unfixed: true
-          severity: "CRITICAL,HIGH"
+          severity: 'CRITICAL,HIGH'
 
       - name: Test container security
         run: |
@@ -601,7 +600,7 @@ jobs:
           else
             echo "✅ Container runs as non-root user (UID: $USER_ID)"
           fi
-
+          
           # Test read-only filesystem capability
           docker run --rm --read-only komodo-periphery:security-test \
             sh -c "echo 'Read-only filesystem test passed'" || {
@@ -633,13 +632,13 @@ jobs:
         run: |
           # Measure container startup time
           start_time=$(date +%s.%N)
-
+          
           CONTAINER_ID=$(docker run -d \
             --env KOMODO_ADDRESS="https://test.example.com" \
             --env KOMODO_API_KEY="test-key" \
             --env KOMODO_API_SECRET="test-secret" \
             komodo-periphery:perf-test)
-
+          
           # Wait for container to be ready
           timeout=30
           while [ $timeout -gt 0 ]; do
@@ -649,16 +648,16 @@ jobs:
             sleep 1
             timeout=$((timeout - 1))
           done
-
+          
           end_time=$(date +%s.%N)
           startup_time=$(echo "$end_time - $start_time" | bc)
-
+          
           echo "Startup time: ${startup_time}s"
-
+          
           # Cleanup
           docker stop $CONTAINER_ID
           docker rm $CONTAINER_ID
-
+          
           # Fail if startup takes more than 30 seconds
           if (( $(echo "$startup_time > 30" | bc -l) )); then
             echo "ERROR: Startup time too slow: ${startup_time}s"
@@ -673,14 +672,14 @@ jobs:
             --env KOMODO_API_KEY="test-key" \
             --env KOMODO_API_SECRET="test-secret" \
             komodo-periphery:perf-test)
-
+          
           # Wait for stabilization
           sleep 30
-
+          
           # Get memory usage
           MEMORY_USAGE=$(docker stats --no-stream --format "{{.MemUsage}}" $CONTAINER_ID)
           echo "Memory usage: $MEMORY_USAGE"
-
+          
           # Cleanup
           docker stop $CONTAINER_ID
           docker rm $CONTAINER_ID
@@ -689,7 +688,7 @@ jobs:
   test-summary:
     name: Test summary
     runs-on: ubuntu-latest
-    needs:
+    needs: 
       - preflight
       - lint
       - config-validation
@@ -709,7 +708,7 @@ jobs:
           echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build Tests | ${{ needs.build-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Installation Tests | ${{ needs.installation-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-
+          
           # Check if any required job failed
           if [[ "${{ needs.preflight.result }}" != "success" ]] || \
              [[ "${{ needs.lint.result }}" != "success" ]] || \
