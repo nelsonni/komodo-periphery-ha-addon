@@ -12,8 +12,9 @@ BASE_IMAGE="ghcr.io/hassio-addons/base-amd64:latest"
 
 # Packages to check
 PACKAGES=(
+    "bash"
     "curl"
-    "docker-cli" 
+    "docker-cli"
     "openssl"
     "procps-ng"
 )
@@ -25,7 +26,7 @@ echo ""
 get_package_version() {
     local package=$1
     echo "Checking $package..."
-    
+
     # Run apk search in the container to get available versions
     docker run --rm "$BASE_IMAGE" sh -c "apk search '$package' | grep '^$package-[0-9]' | head -5" || {
         echo "  ❌ Failed to check $package"

@@ -7,27 +7,28 @@ FROM ${BUILD_FROM}
 
 # Install bash first if not already available (needed for SHELL directive)
 RUN if ! command -v bash >/dev/null 2>&1; then \
-        apk add --no-cache bash=5.2.26-r0; \
+        apk add --no-cache bash=5.2.37-r0 || apk add --no-cache bash; \
     fi
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Set environment variables
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 ENV PERIPHERY_CONFIG_DIR=/data/config
 ENV PERIPHERY_DATA_DIR=/data
 ENV PERIPHERY_SSL_DIR=/data/ssl
 
 # Install required packages with version fallback strategy
+# Package versions updated for Alpine 3.21 - update periodically
 # Try pinned versions first, fall back to latest if not available
 # This ensures compatibility across different base images and Alpine versions
 # hadolint ignore=DL3018
 RUN set -e; \
     echo "Installing packages with version fallback..."; \
     apk add --no-cache \
-        curl=8.11.1-r0 \
-        docker-cli=27.3.1-r2 \
+        curl=8.12.1-r0 \
+        docker-cli=27.4.1-r0 \
         openssl=3.3.2-r4 \
         procps-ng=4.0.4-r0 \
     || { \
