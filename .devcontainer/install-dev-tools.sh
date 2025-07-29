@@ -28,7 +28,7 @@ safe_curl_install() {
     local url="$1"
     local target="$2"
     local name="$3"
-    
+
     if command_exists curl; then
         echo "📥 Installing $name..."
         curl -fsSL "$url" -o "$target" || {
@@ -70,7 +70,7 @@ if command_exists curl && command_exists jq; then
         "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
         "/tmp/hadolint" \
         "hadolint"
-    
+
     if [ -f "/tmp/hadolint" ]; then
         sudo install /tmp/hadolint /usr/local/bin/hadolint 2>/dev/null || {
             echo "⚠️ Could not install hadolint to /usr/local/bin, trying alternative location..."
@@ -138,7 +138,7 @@ if command_exists curl && command_exists jq; then
         "https://github.com/aelsabbahy/goss/releases/download/${GOSS_VERSION}/goss-linux-amd64" \
         "/tmp/goss" \
         "goss"
-    
+
     if [ -f "/tmp/goss" ]; then
         sudo install /tmp/goss /usr/local/bin/goss 2>/dev/null || {
             mkdir -p ~/.local/bin
@@ -156,7 +156,7 @@ if command_exists curl && command_exists jq; then
         "https://github.com/wagoodman/dive/releases/download/${DIVE_VERSION}/dive_${DIVE_VERSION#v}_linux_amd64.deb" \
         "/tmp/dive.deb" \
         "dive"
-    
+
     if [ -f "/tmp/dive.deb" ]; then
         sudo dpkg -i /tmp/dive.deb 2>/dev/null || echo "⚠️ Could not install dive via dpkg"
         rm -f /tmp/dive.deb
@@ -187,7 +187,7 @@ if command_exists curl && command_exists jq; then
         "https://github.com/jesseduffield/lazydocker/releases/download/${LAZYDOCKER_VERSION}/lazydocker_${LAZYDOCKER_VERSION#v}_Linux_x86_64.tar.gz" \
         "/tmp/lazydocker.tar.gz" \
         "lazydocker"
-    
+
     if [ -f "/tmp/lazydocker.tar.gz" ]; then
         tar xf /tmp/lazydocker.tar.gz -C /tmp 2>/dev/null || echo "⚠️ Could not extract lazydocker"
         if [ -f "/tmp/lazydocker" ]; then
@@ -210,7 +210,7 @@ if ! command_exists docker-compose; then
             "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" \
             "/tmp/docker-compose" \
             "docker-compose"
-        
+
         if [ -f "/tmp/docker-compose" ]; then
             sudo install /tmp/docker-compose /usr/local/bin/docker-compose 2>/dev/null || {
                 mkdir -p ~/.local/bin
@@ -232,7 +232,7 @@ if command_exists curl && command_exists jq; then
         "https://github.com/nektos/act/releases/download/${ACT_VERSION}/act_Linux_x86_64.tar.gz" \
         "/tmp/act.tar.gz" \
         "act"
-    
+
     if [ -f "/tmp/act.tar.gz" ]; then
         tar xf /tmp/act.tar.gz -C /tmp 2>/dev/null || echo "⚠️ Could not extract act"
         if [ -f "/tmp/act" ]; then
@@ -373,8 +373,8 @@ chmod +x ~/.local/bin/addon-shell 2>/dev/null || true
 fi
 
 # Add local bin to PATH if not already there
-if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$BASHRC_FILE" 2>/dev/null; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASHRC_FILE"
+if ! grep -q "export PATH=\"$HOME/.local/bin:$PATH\"" "$BASHRC_FILE" 2>/dev/null; then
+    echo "export PATH=\"$HOME/.local/bin:$PATH\"" >> "$BASHRC_FILE"
 fi
 
 # Create development configuration
@@ -387,7 +387,7 @@ development:
   auto_reload: true
   debug_mode: true
   verbose_logging: true
-  
+
 testing:
   mock_komodo_server: true
   use_test_data: true
