@@ -1,0 +1,79 @@
+FROM ghcr.io/home-assistant/alpine-base:3.21
+
+# Set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Set environment variables
+ENV LANG C.UTF-8
+ENV PERIPHERY_CONFIG_DIR=/data/config
+ENV PERIPHERY_DATA_DIR=/data
+ENV PERIPHERY_SSL_DIR=/data/ssl
+
+# Install required packages
+RUN apk add --no-cache \
+    curl \
+    docker-cli \
+    openssl \
+    procps \
+    && rm -rf /var/cache/apk/*
+
+# Create necessary directories
+RUN mkdir -p ${PERIPHERY_CONFIG_DIR} ${PERIPHERY_SSL_DIR}
+
+# Create a mock periphery binary for testing
+RUN echo '#!/bin/bash' > /usr/local/bin/periphery \
+    && echo 'echo "Mock Komodo Periphery for testing"' >> /usr/local/bin/periphery \
+    && echo 'echo "Version: test-mock-1.0.0"' >> /usr/local/bin/periphery \
+    && echo 'if [[ "$1" == "--version" ]]; then' >> /usr/local/bin/periphery \
+    && echo '  echo "periphery test-mock-1.0.0"' >> /usr/local/bin/periphery \
+    && echo '  exit 0' >> /usr/local/bin/periphery \
+    && echo 'fi' >> /usr/local/bin/periphery \
+    && echo '# Start a simple HTTP server on port 8120 for testing' >> /usr/local/bin/periphery \
+    && echo 'echo "Starting mock Periphery server on port 8120..."' >> /usr/local/bin/periphery \
+    && echo 'while true; do' >> /usr/local/bin/periphery \
+    && echo '  echo -e "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nMock Periphery" | nc -l -p 8120' >> /usr/local/bin/periphery \
+    && echo 'done' >> /usr/local/bin/periphery \
+    && chmod +x /usr/local/bin/periphery
+
+# Install netcat for the mock server
+RUN apk add --no-cache netcat-openbsd
+
+# Create non-root user for security
+RUN addgroup -g 1000 komodo \
+    && adduser -D -s /bin/bash -G komodo -u 1000 komodo \
+    && addgroup komodo docker
+
+# Set proper permissions
+RUN chown -R komodo:komodo ${PERIPHERY_DATA_DIR}
+
+# Copy run script
+COPY rootfs /
+
+# Make run script executable
+RUN chmod a+x /etc/services.d/komodo-periphery/run
+
+# Labels
+LABEL \
+    io.hass.name="Komodo Periphery (Test)" \
+    io.hass.description="Mock Komodo Periphery Agent for testing" \
+    io.hass.arch="armhf|aarch64|amd64" \
+    io.hass.type="addon" \
+    io.hass.version="test" \
+    maintainer="Test Suite" \
+    org.opencontainers.image.title="Komodo Periphery Test Add-on" \
+    org.opencontainers.image.description="Mock Komodo Periphery agent for testing" \
+    org.opencontainers.image.source="https://github.com/moghtech/komodo" \
+    org.opencontainers.image.licenses="MIT"
+
+# Health check (mock endpoint)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8120 || exit 1
+
+# Expose default Komodo Periphery port
+EXPOSE 8120
+
+# Switch to non-root user
+USER komodo
+
+# Start service using s6 overlay
+CMD ["/init"]

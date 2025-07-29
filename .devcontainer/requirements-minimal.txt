@@ -16,6 +16,9 @@ colorama>=0.4.6
 # Docker API
 docker>=6.1.0
 
+# Container testing (essential for integration tests)
+testcontainers>=3.7.0
+
 # Development tools
 black>=23.7.0
 isort>=5.12.0

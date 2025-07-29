@@ -37,9 +37,9 @@ schema:
   container_stats_polling_rate: str
   ssl_enabled: bool
   monitor_homeassistant: bool
-  allowed_ips: [str]?
-  passkeys: [password]?
-image: ghcr.io/home-assistant/komodo-periphery-{arch}
+  allowed_ips: "[str]?"
+  passkeys: "[password]?"
+image: "ghcr.io/home-assistant/komodo-periphery-{arch}"
 privileged:
   - SYS_ADMIN
 docker_api: true
