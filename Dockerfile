@@ -6,6 +6,7 @@ ARG BUILD_FROM=alpine:3.21
 FROM ${BUILD_FROM}
 
 # Install bash first if not already available (needed for SHELL directive)
+# hadolint ignore=DL3018
 RUN if ! command -v bash >/dev/null 2>&1; then \
         apk add --no-cache bash=5.2.37-r0 || apk add --no-cache bash; \
     fi
