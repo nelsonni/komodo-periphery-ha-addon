@@ -21,6 +21,8 @@ ENV PERIPHERY_SSL_DIR=/data/ssl
 
 # Install required packages with version fallback strategy
 # Try pinned versions first, fall back to latest if not available
+# This ensures compatibility across different base images and Alpine versions
+# hadolint ignore=DL3018
 RUN set -e; \
     echo "Installing packages with version fallback..."; \
     apk add --no-cache \
