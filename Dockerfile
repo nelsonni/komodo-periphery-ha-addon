@@ -1,5 +1,4 @@
-ARG BUILD_FROM
-FROM ${BUILD_FROM}
+FROM ghcr.io/home-assistant/alpine-base:3.21
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
