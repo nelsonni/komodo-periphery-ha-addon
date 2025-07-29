@@ -1,5 +1,5 @@
 name: Komodo Periphery
-version: "1.0.0"
+version: "dev"
 slug: komodo_periphery
 description: Komodo Periphery agent for monitoring Home Assistant OS system metrics
 url: https://github.com/moghtech/komodo
@@ -10,11 +10,10 @@ arch:
   - amd64
   - i386
 startup: services
-boot: auto
 init: false
 map:
   - "ssl:rw"
-  - "addons_config:rw"
+  - "addon_config:rw"
 ports:
   8120/tcp: 8120
 ports_description:
@@ -43,9 +42,6 @@ image: "ghcr.io/home-assistant/komodo-periphery-{arch}"
 privileged:
   - SYS_ADMIN
 docker_api: true
-host_network: false
-host_pid: false
-apparmor: true
 devices:
   - "/dev/fuse"
 environment:
