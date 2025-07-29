@@ -1,3 +1,4 @@
+---
 name: Builder
 
 # Environment variables for the build
@@ -8,14 +9,14 @@ env:
 # Trigger conditions
 on:
   schedule:
-    - cron: "0 2 * * 0"  # Weekly builds on Sunday at 2 AM UTC
+    - cron: "0 2 * * 0" # Weekly builds on Sunday at 2 AM UTC
   push:
     branches:
       - main
       - dev
     paths:
       - "build.yaml"
-      - "config.yaml" 
+      - "config.yaml"
       - "Dockerfile"
       - "rootfs/**"
       - ".github/workflows/builder.yaml"
@@ -25,13 +26,13 @@ on:
     paths:
       - "build.yaml"
       - "config.yaml"
-      - "Dockerfile" 
+      - "Dockerfile"
       - "rootfs/**"
       - ".github/workflows/builder.yaml"
   workflow_dispatch:
     inputs:
       force_build:
-        description: 'Force build all architectures'
+        description: "Force build all architectures"
         required: false
         default: false
         type: boolean
@@ -61,7 +62,7 @@ jobs:
         id: changed_addons
         run: |
           declare -a changed_addons
-          
+
           # Force build if scheduled, workflow_dispatch, or force_build is true
           if [[ "${{ github.event_name }}" == "schedule" ]] || \
              [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
@@ -76,7 +77,7 @@ jobs:
               fi
             done
           fi
-          
+
           changed=$(printf "%s\n" "${changed_addons[@]}" | jq -R -s -c 'split("\n")[:-1]')
           echo "changed=$([[ ${#changed_addons[@]} -gt 0 ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
           echo "addons=$changed" >> $GITHUB_OUTPUT
@@ -106,7 +107,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: Build ${{ matrix.arch }} add-on
-    needs: 
+    needs:
       - init
       - lint
     if: needs.init.outputs.changed == 'true'
@@ -176,13 +177,13 @@ jobs:
   security:
     runs-on: ubuntu-latest
     name: Security scan
-    needs: 
+    needs:
       - init
       - build
     if: needs.init.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     strategy:
       matrix:
-        arch: ["amd64"]  # Only scan one architecture for security
+        arch: ["amd64"] # Only scan one architecture for security
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -205,20 +206,20 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'local/komodo-periphery:${{ matrix.arch }}'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          image-ref: "local/komodo-periphery:${{ matrix.arch }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"
 
   publish:
     runs-on: ubuntu-latest
     name: Publish add-on
-    needs: 
+    needs:
       - init
       - build
     if: needs.init.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -254,7 +255,7 @@ jobs:
   notification:
     runs-on: ubuntu-latest
     name: Send notification
-    needs: 
+    needs:
       - init
       - build
       - publish
