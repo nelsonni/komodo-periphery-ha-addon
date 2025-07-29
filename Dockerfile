@@ -12,10 +12,10 @@ ENV PERIPHERY_SSL_DIR=/data/ssl
 
 # Install required packages
 RUN apk add --no-cache \
-    curl \
-    docker-cli \
-    openssl \
-    procps \
+    curl=8.11.1-r0 \
+    docker-cli=27.4.1-r0 \
+    openssl=3.3.2-r3 \
+    procps=4.0.4-r0 \
     && rm -rf /var/cache/apk/*
 
 # Create necessary directories
