@@ -310,7 +310,7 @@ alias gd='git diff'
 
 # Quick navigation
 alias workspace='cd /workspaces'
-alias addon='cd /workspaces/${ADDON_SLUG:-komodo_periphery}'
+alias addon="cd /workspaces/\${ADDON_SLUG:-komodo_periphery}"
 
 # Development utilities
 alias python='python3'

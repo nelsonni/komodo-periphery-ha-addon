@@ -14,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-ADDON_NAME="komodo-periphery"
+export ADDON_NAME="komodo-periphery"  # Export since it's used in functions
 ADDON_SLUG="komodo_periphery"
 REPO_NAME="komodo-periphery-addon"
 HA_ADDONS_DIR=""
@@ -74,7 +74,7 @@ install_dependencies() {
                 sudo apt-get install -y git curl docker.io docker-compose jq
                 
                 # Add user to docker group
-                sudo usermod -aG docker $USER
+                sudo usermod -aG docker "$USER"
                 print_warning "You may need to log out and back in for Docker group changes to take effect"
                 
             elif command_exists yum; then
@@ -83,14 +83,14 @@ install_dependencies() {
                 sudo yum install -y git curl docker docker-compose jq
                 sudo systemctl enable docker
                 sudo systemctl start docker
-                sudo usermod -aG docker $USER
+                sudo usermod -aG docker "$USER"
                 
             elif command_exists pacman; then
                 print_status "Installing dependencies via pacman..."
                 sudo pacman -Syu --noconfirm git curl docker docker-compose jq
                 sudo systemctl enable docker
                 sudo systemctl start docker
-                sudo usermod -aG docker $USER
+                sudo usermod -aG docker "$USER"
                 
             else
                 print_error "Unsupported Linux distribution. Please install git, curl, docker, docker-compose, and jq manually."
