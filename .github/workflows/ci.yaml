@@ -98,17 +98,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r .devcontainer/requirements.txt
 
+      - name: Create package.json for Node.js tools
+        run: |
+          # Create a minimal package.json for Node.js dependencies
+          cat > package.json << 'EOF'
+          {
+            "name": "komodo-periphery-addon",
+            "version": "1.0.0",
+            "description": "Development dependencies for Komodo Periphery Add-on",
+            "private": true,
+            "devDependencies": {
+              "@home-assistant/cli": "^4.0.0",
+              "yaml-lint": "^1.7.0"
+            }
+          }
+          EOF
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: package.json
 
       - name: Install Node.js dependencies
         run: |
-          npm install -g @home-assistant/cli
-          npm install -g yaml-lint
+          npm install
+          # Also install global packages for linting
+          npm install -g @home-assistant/cli yaml-lint
 
       # YAML Linting
       - name: Lint YAML files
@@ -185,6 +201,13 @@ jobs:
           path: ./
           base: main
           head: HEAD
+
+      # Cleanup generated files
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f package.json package-lock.json
+          rm -rf node_modules
 
   # Configuration validation
   config-validation:
