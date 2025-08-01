@@ -1,7 +1,8 @@
 # Docker Compose for local development and testing
 # Komodo Periphery Home Assistant Add-on
 
-version: '3.8'
+---
+version: "3.8"
 
 services:
   # Komodo Periphery service for development
@@ -18,7 +19,7 @@ services:
     container_name: komodo-periphery-dev
     image: komodo-periphery:dev
     restart: unless-stopped
-    
+
     # Environment variables for development
     environment:
       - KOMODO_ADDRESS=${KOMODO_ADDRESS:-https://demo.komo.do}
@@ -29,27 +30,27 @@ services:
       - PERIPHERY_CONTAINER_STATS_POLLING_RATE=${CONTAINER_STATS_POLLING_RATE:-1-min}
       - PERIPHERY_SSL_ENABLED=${SSL_ENABLED:-true}
       - PERIPHERY_PORT=${PERIPHERY_PORT:-8120}
-    
+
     # Ports
     ports:
       - "${PERIPHERY_PORT:-8120}:8120"
-    
+
     # Volumes for development
     volumes:
       # Configuration directory
       - ./dev-data/config:/data/config
       - ./dev-data/ssl:/data/ssl
-      
+
       # Docker socket access for container management
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      
+
       # Mount source code for development (optional)
       - ./rootfs:/rootfs:ro
-    
+
     # Networking
     networks:
       - komodo-dev
-    
+
     # Health check
     healthcheck:
       test: ["CMD", "curl", "-f", "-k", "https://localhost:8120/health"]
@@ -57,17 +58,17 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    
+
     # Resource limits for development
     deploy:
       resources:
         limits:
           memory: 256M
-          cpus: '0.5'
+          cpus: "0.5"
         reservations:
           memory: 128M
-          cpus: '0.1'
-    
+          cpus: "0.1"
+
     # Security context
     user: "1000:1000"
     security_opt:
@@ -75,7 +76,7 @@ services:
     cap_drop:
       - ALL
     cap_add:
-      - SYS_ADMIN  # Required for system monitoring
+      - SYS_ADMIN # Required for system monitoring
 
   # Mock Komodo Core for testing (optional)
   komodo-core-mock:

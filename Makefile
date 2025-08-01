@@ -227,19 +227,35 @@ lint-docker: ## Lint Dockerfile
 lint-yaml: ## Lint YAML files
 	@echo "$(BLUE)Linting YAML files...$(RESET)"
 	@if command -v yamllint >/dev/null 2>&1; then \
-		yamllint -d "{extends: default, rules: {line-length: {max: 120}}}" *.yaml .github/workflows/ 2>/dev/null || { \
-			echo "$(YELLOW)yamllint failed on some files, checking individual files...$(RESET)"; \
-			for file in config.yaml build.yaml; do \
-				if [ -f "$$file" ]; then \
-					yamllint "$$file" && echo "$(GREEN)✅ $$file is valid$(RESET)" || echo "$(YELLOW)⚠️ $$file has issues$(RESET)"; \
+		if [ -f ".yamllint.yml" ]; then \
+			echo "$(BLUE)Using .yamllint.yml configuration...$(RESET)"; \
+			yamllint -c .yamllint.yml . 2>/dev/null || { \
+				echo "$(YELLOW)yamllint failed on some files, checking individual files...$(RESET)"; \
+				for file in config.yaml build.yaml docker-compose.dev.yaml; do \
+					if [ -f "$file" ]; then \
+						yamllint -c .yamllint.yml "$file" && echo "$(GREEN)✅ $file is valid$(RESET)" || echo "$(YELLOW)⚠️ $file has issues$(RESET)"; \
+					fi; \
+				done; \
+				if [ -d ".github/workflows" ]; then \
+					yamllint -c .yamllint.yml .github/workflows/ && echo "$(GREEN)✅ GitHub workflows are valid$(RESET)" || echo "$(YELLOW)⚠️ GitHub workflows have issues$(RESET)"; \
 				fi; \
-			done; \
-		}; \
+			}; \
+		else \
+			echo "$(YELLOW)No .yamllint.yml found, using default configuration...$(RESET)"; \
+			yamllint -d "{extends: default, rules: {line-length: {max: 120}}}" *.yaml .github/workflows/ 2>/dev/null || { \
+				echo "$(YELLOW)yamllint failed on some files, checking individual files...$(RESET)"; \
+				for file in config.yaml build.yaml; do \
+					if [ -f "$file" ]; then \
+						yamllint "$file" && echo "$(GREEN)✅ $file is valid$(RESET)" || echo "$(YELLOW)⚠️ $file has issues$(RESET)"; \
+					fi; \
+				done; \
+			}; \
+		fi; \
 	else \
 		echo "$(YELLOW)yamllint not available, using Python YAML validation...$(RESET)"; \
-		for file in config.yaml build.yaml; do \
-			if [ -f "$$file" ]; then \
-				python3 -c "import yaml; yaml.safe_load(open('$$file'))" && echo "$(GREEN)✅ $$file is valid YAML$(RESET)" || echo "$(RED)❌ $$file is invalid YAML$(RESET)"; \
+		for file in config.yaml build.yaml docker-compose.dev.yaml; do \
+			if [ -f "$file" ]; then \
+				python3 -c "import yaml; yaml.safe_load(open('$file'))" && echo "$(GREEN)✅ $file is valid YAML$(RESET)" || echo "$(RED)❌ $file is invalid YAML$(RESET)"; \
 			fi; \
 		done; \
 	fi

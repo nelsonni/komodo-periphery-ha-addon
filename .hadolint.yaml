@@ -6,15 +6,12 @@ ignored:
   # DL3006: Always tag the version of an image explicitly
   # Ignored because HA add-ons use ARG BUILD_FROM pattern from build.yaml
   - DL3006
-
   # DL3008: Pin versions in apt get install
   # We handle this differently in our Alpine-based images
   - DL3008
-
   # DL3009: Delete the apt-get lists after installing something
   # Not applicable to Alpine apk package manager
   - DL3009
-
 # Allow specific trusted registries
 trustedRegistries:
   - ghcr.io
