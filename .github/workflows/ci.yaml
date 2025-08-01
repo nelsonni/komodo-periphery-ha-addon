@@ -120,34 +120,7 @@ jobs:
           echo "pylint version: $(pylint --version | head -1)"
           echo "yamllint version: $(yamllint --version)"
 
-      - name: Create package.json for Node.js tools
-        run: |
-          # Create a minimal package.json for Node.js dependencies
-          cat > package.json << 'EOF'
-          {
-            "name": "komodo-periphery-addon",
-            "version": "1.0.0",
-            "description": "Development dependencies for Komodo Periphery Add-on",
-            "private": true,
-            "devDependencies": {
-              "@home-assistant/cli": "^4.0.0",
-              "yaml-lint": "^1.7.0"
-            }
-          }
-          EOF
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Node.js dependencies
-        run: |
-          npm install
-          # Also install global packages for linting
-          npm install -g @home-assistant/cli yaml-lint
-
-      # YAML Linting
+      # YAML Linting (using Python yamllint instead of Node.js)
       - name: Lint YAML files
         run: |
           # Use custom yamllint config that's compatible with Prettier
@@ -204,7 +177,7 @@ jobs:
               exit(1)
           "
 
-      # Home Assistant Add-on Linting
+      # Home Assistant Add-on Linting (using Docker-based approach)
       - name: Lint Home Assistant Add-on
         uses: frenck/action-addon-linter@v2.15
         with:
@@ -230,20 +203,20 @@ jobs:
       - name: Check Python code quality
         run: |
           echo "🐍 Checking Python code quality with pinned tool versions..."
-
+          
           # Check installation scripts
           echo "Compiling install.py..."
           python -m py_compile install.py
-
+          
           echo "Checking install.py formatting with Black ${{ env.BLACK_VERSION }}..."
           black --check --diff install.py
-
+          
           echo "Checking install.py import sorting..."
           isort --check-only --diff install.py
-
+          
           echo "Running flake8 on install.py..."
           flake8 install.py --max-line-length=120
-
+          
           echo "Running pylint on install.py..."
           pylint install.py --disable=C0114,C0116 || true
 
@@ -251,13 +224,13 @@ jobs:
           if [ -d "tests" ]; then
             echo "Compiling test files..."
             python -m py_compile tests/*.py
-
+            
             echo "Checking test files formatting with Black..."
             black --check --diff tests/
-
+            
             echo "Checking test files import sorting..."
             isort --check-only --diff tests/
-
+            
             echo "Running flake8 on test files..."
             flake8 tests/ --max-line-length=120
           fi
@@ -294,8 +267,8 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          rm -f package.json package-lock.json bandit-report.json
-          rm -rf node_modules
+          # No Node.js files to clean up anymore
+          rm -f bandit-report.json
 
   # Configuration validation
   config-validation:
