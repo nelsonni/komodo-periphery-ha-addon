@@ -15,9 +15,9 @@ class TestBasicIntegration:
     def test_container_with_mock_periphery_env(self):
         """Test container with mock Komodo Periphery environment variables."""
         client = docker.from_env()
-        
+
         # Simple test script that avoids /data directory conflicts
-        test_script = '''
+        test_script = """
         echo "=== Komodo Periphery Environment Test ==="
         
         # Check environment variables
@@ -81,41 +81,43 @@ EOF
         fi
         
         echo "=== Test completed successfully ==="
-        '''
-        
+        """
+
         container = None
         try:
             # Create container without auto-remove to get logs safely
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', test_script],
+                "alpine:latest",
+                command=["sh", "-c", test_script],
                 detach=True,
                 remove=False,  # Don't auto-remove so we can get logs
                 environment={
-                    'KOMODO_ADDRESS': 'https://demo.komo.do',
-                    'KOMODO_API_KEY': 'demo-api-key-123456789',
-                    'KOMODO_API_SECRET': 'demo-api-secret-987654321',
-                    'PERIPHERY_PORT': '8120',
-                    'LOG_LEVEL': 'debug'
-                }
+                    "KOMODO_ADDRESS": "https://demo.komo.do",
+                    "KOMODO_API_KEY": "demo-api-key-123456789",
+                    "KOMODO_API_SECRET": "demo-api-secret-987654321",
+                    "PERIPHERY_PORT": "8120",
+                    "LOG_LEVEL": "debug",
+                },
             )
-            
+
             # Wait for completion with timeout
             result = container.wait(timeout=60)
-            
+
             # Get logs before container is removed
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
             print(f"\n=== Container Output ===\n{logs}\n========================")
-            
+
             # Verify success
-            assert result['StatusCode'] == 0, f"Container failed with exit code {result['StatusCode']}"
-            
+            assert (
+                result["StatusCode"] == 0
+            ), f"Container failed with exit code {result['StatusCode']}"
+
             # Check for expected output
-            assert 'KOMODO_ADDRESS: https://demo.komo.do' in logs
-            assert 'Configuration file created successfully' in logs
-            assert 'port = 8120' in logs
-            assert 'Test completed successfully' in logs
-            
+            assert "KOMODO_ADDRESS: https://demo.komo.do" in logs
+            assert "Configuration file created successfully" in logs
+            assert "port = 8120" in logs
+            assert "Test completed successfully" in logs
+
         except docker.errors.DockerException as e:
             pytest.fail(f"Docker error in mock Periphery environment test: {e}")
         except Exception as e:
@@ -131,9 +133,9 @@ EOF
     def test_container_with_proper_data_directory(self):
         """Test container with proper data directory setup avoiding conflicts."""
         client = docker.from_env()
-        
+
         # Script that creates a clean environment without touching existing /data files
-        setup_script = '''
+        setup_script = """
         echo "=== Data Directory Setup Test ==="
         
         # Use a completely separate directory to avoid conflicts
@@ -188,38 +190,40 @@ EOF
         ls -la "$TEST_DATA_DIR/config"
         
         echo "=== Data directory test completed successfully ==="
-        '''
-        
+        """
+
         container = None
         try:
             # Create container without auto-remove to get logs safely
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', setup_script],
+                "alpine:latest",
+                command=["sh", "-c", setup_script],
                 detach=True,
                 remove=False,  # Don't auto-remove so we can get logs
                 environment={
-                    'KOMODO_ADDRESS': 'https://test.example.com',
-                    'KOMODO_API_KEY': 'test-key',
-                    'KOMODO_API_SECRET': 'test-secret'
-                }
+                    "KOMODO_ADDRESS": "https://test.example.com",
+                    "KOMODO_API_KEY": "test-key",
+                    "KOMODO_API_SECRET": "test-secret",
+                },
             )
-            
+
             # Wait for completion
             result = container.wait(timeout=60)
-            
+
             # Get logs before removing container
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
             print(f"\n=== Container Output ===\n{logs}\n========================")
-            
+
             # Check exit code
-            assert result['StatusCode'] == 0, f"Container failed with exit code {result['StatusCode']}"
-            
+            assert (
+                result["StatusCode"] == 0
+            ), f"Container failed with exit code {result['StatusCode']}"
+
             # Verify expected output
-            assert 'Configuration file created successfully' in logs
-            assert 'port=8120' in logs
-            assert 'Data directory test completed successfully' in logs
-            
+            assert "Configuration file created successfully" in logs
+            assert "port=8120" in logs
+            assert "Data directory test completed successfully" in logs
+
         except docker.errors.DockerException as e:
             pytest.fail(f"Docker error in data directory test: {e}")
         except Exception as e:
@@ -235,28 +239,36 @@ EOF
     def test_simple_alpine_container(self):
         """Test basic Alpine container functionality without complex setup."""
         client = docker.from_env()
-        
+
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', 'echo "Hello from Alpine container" && sleep 1 && echo "Container test completed"'],
+                "alpine:latest",
+                command=[
+                    "sh",
+                    "-c",
+                    'echo "Hello from Alpine container" && sleep 1 && echo "Container test completed"',
+                ],
                 detach=True,
                 remove=False,  # Don't auto-remove
-                environment={'TEST_VAR': 'test_value'}
+                environment={"TEST_VAR": "test_value"},
             )
-            
+
             # Wait for completion
             result = container.wait(timeout=30)
-            logs = container.logs().decode('utf-8')
-            
-            print(f"\n=== Simple Container Test ===\n{logs}\n=============================")
-            
+            logs = container.logs().decode("utf-8")
+
+            print(
+                f"\n=== Simple Container Test ===\n{logs}\n============================="
+            )
+
             # Verify success
-            assert result['StatusCode'] == 0, f"Container exited with status {result['StatusCode']}"
-            assert 'Hello from Alpine container' in logs
-            assert 'Container test completed' in logs
-            
+            assert (
+                result["StatusCode"] == 0
+            ), f"Container exited with status {result['StatusCode']}"
+            assert "Hello from Alpine container" in logs
+            assert "Container test completed" in logs
+
         except docker.errors.DockerException as e:
             pytest.fail(f"Docker error in simple Alpine test: {e}")
         except Exception as e:
@@ -271,7 +283,7 @@ EOF
 
 
 @pytest.mark.integration
-@pytest.mark.docker 
+@pytest.mark.docker
 class TestContainerBasics:
     """Basic container functionality tests."""
 
@@ -280,7 +292,7 @@ class TestContainerBasics:
         try:
             client = docker.from_env()
             version = client.version()
-            assert 'Version' in version
+            assert "Version" in version
             print(f"Docker version: {version.get('Version', 'Unknown')}")
         except Exception as e:
             pytest.fail(f"Docker client connection failed: {e}")
@@ -288,51 +300,53 @@ class TestContainerBasics:
     def test_alpine_image_availability(self):
         """Test Alpine image can be pulled and used."""
         client = docker.from_env()
-        
+
         try:
             # Pull Alpine image
-            image = client.images.pull('alpine:latest')
+            image = client.images.pull("alpine:latest")
             assert image is not None
-            
+
             # Verify image exists
-            images = client.images.list(name='alpine:latest')
+            images = client.images.list(name="alpine:latest")
             assert len(images) > 0
-            
+
         except Exception as e:
             pytest.fail(f"Alpine image test failed: {e}")
 
     def test_container_environment_variables(self):
         """Test environment variables are properly passed to containers."""
         client = docker.from_env()
-        
+
         test_env = {
-            'TEST_VAR_1': 'value1',
-            'TEST_VAR_2': 'value2',
-            'KOMODO_TEST': 'komodo_value'
+            "TEST_VAR_1": "value1",
+            "TEST_VAR_2": "value2",
+            "KOMODO_TEST": "komodo_value",
         }
-        
+
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', 'env | grep TEST | sort'],
+                "alpine:latest",
+                command=["sh", "-c", "env | grep TEST | sort"],
                 environment=test_env,
                 detach=True,
-                remove=False  # Don't auto-remove
+                remove=False,  # Don't auto-remove
             )
-            
+
             result = container.wait(timeout=30)
-            logs = container.logs().decode('utf-8')
-            
+            logs = container.logs().decode("utf-8")
+
             print(f"\n=== Environment Test ===\n{logs}\n========================")
-            
-            assert result['StatusCode'] == 0
-            
+
+            assert result["StatusCode"] == 0
+
             # Check each environment variable
             for key, value in test_env.items():
-                if 'TEST' in key or 'KOMODO' in key:
-                    assert f"{key}={value}" in logs, f"Environment variable {key} not found"
-                    
+                if "TEST" in key or "KOMODO" in key:
+                    assert (
+                        f"{key}={value}" in logs
+                    ), f"Environment variable {key} not found"
+
         except Exception as e:
             pytest.fail(f"Environment variables test failed: {e}")
         finally:

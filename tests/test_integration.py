@@ -19,7 +19,7 @@ class TestContainerIntegration:
         client = docker.from_env()
 
         # Script that mimics Komodo Periphery startup
-        startup_script = '''
+        startup_script = """
         echo "=== Komodo Periphery Container Test ==="
 
         # Verify environment variables
@@ -80,39 +80,42 @@ EOF
         fi
 
         echo "=== Container integration test completed ==="
-        '''
+        """
 
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', startup_script],
+                "alpine:latest",
+                command=["sh", "-c", startup_script],
                 detach=True,
                 remove=False,
                 environment={
-                    'KOMODO_ADDRESS': 'https://test.komodo.example.com',
-                    'KOMODO_API_KEY': 'integration-test-key-12345',
-                    'KOMODO_API_SECRET': 'integration-test-secret-67890',
-                    'PERIPHERY_PORT': '8120',
-                    'PERIPHERY_SSL_ENABLED': 'true'
+                    "KOMODO_ADDRESS": "https://test.komodo.example.com",
+                    "KOMODO_API_KEY": "integration-test-key-12345",
+                    "KOMODO_API_SECRET": "integration-test-secret-67890",
+                    "PERIPHERY_PORT": "8120",
+                    "PERIPHERY_SSL_ENABLED": "true",
                 },
                 # Don't expose ports for this test - just test internal functionality
             )
 
             result = container.wait(timeout=60)
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
 
             print(
-                f"\n=== Container Integration Test ===\n{logs}\n================================")
+                f"\n=== Container Integration Test ===\n{logs}\n================================"
+            )
 
             # Verify success
-            assert result['StatusCode'] == 0, f"Container failed: {result['StatusCode']}"
+            assert (
+                result["StatusCode"] == 0
+            ), f"Container failed: {result['StatusCode']}"
 
             # Check expected behavior
-            assert 'KOMODO_ADDRESS: https://test.komodo.example.com' in logs
-            assert 'Configuration file created' in logs
-            assert 'port = 8120' in logs
-            assert 'Container integration test completed' in logs
+            assert "KOMODO_ADDRESS: https://test.komodo.example.com" in logs
+            assert "Configuration file created" in logs
+            assert "port = 8120" in logs
+            assert "Container integration test completed" in logs
 
         except Exception as e:
             pytest.fail(f"Container integration test failed: {e}")
@@ -128,7 +131,7 @@ EOF
         client = docker.from_env()
 
         # Create a mock periphery binary and test its execution
-        mock_periphery_script = '''
+        mock_periphery_script = """
         echo "=== Mock Periphery Binary Test ==="
 
         # Create mock periphery binary
@@ -170,32 +173,33 @@ EOF
         fi
 
         echo "=== Mock periphery binary test completed ==="
-        '''
+        """
 
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', mock_periphery_script],
+                "alpine:latest",
+                command=["sh", "-c", mock_periphery_script],
                 detach=True,
                 remove=False,
                 environment={
-                    'KOMODO_ADDRESS': 'https://mock.example.com',
-                    'KOMODO_API_KEY': 'mock-key',
-                    'KOMODO_API_SECRET': 'mock-secret'
-                }
+                    "KOMODO_ADDRESS": "https://mock.example.com",
+                    "KOMODO_API_KEY": "mock-key",
+                    "KOMODO_API_SECRET": "mock-secret",
+                },
             )
 
             result = container.wait(timeout=60)
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
 
             print(
-                f"\n=== Mock Periphery Binary Test ===\n{logs}\n=================================")
+                f"\n=== Mock Periphery Binary Test ===\n{logs}\n================================="
+            )
 
-            assert result['StatusCode'] == 0
-            assert 'Starting periphery agent' in logs
-            assert 'Binding to port 8120' in logs
-            assert 'Mock periphery binary test completed' in logs
+            assert result["StatusCode"] == 0
+            assert "Starting periphery agent" in logs
+            assert "Binding to port 8120" in logs
+            assert "Mock periphery binary test completed" in logs
 
         except Exception as e:
             pytest.fail(f"Mock periphery binary test failed: {e}")
@@ -216,7 +220,7 @@ class TestDockerIntegration:
         """Test container with Docker socket access simulation."""
         client = docker.from_env()
 
-        docker_test_script = '''
+        docker_test_script = """
         echo "=== Docker Socket Integration Test ==="
 
         # Test if Docker commands would be available
@@ -242,26 +246,27 @@ class TestDockerIntegration:
 
         echo "✓ Docker socket access simulation completed"
         echo "=== Docker integration test completed ==="
-        '''
+        """
 
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', docker_test_script],
+                "alpine:latest",
+                command=["sh", "-c", docker_test_script],
                 detach=True,
-                remove=False
+                remove=False,
             )
 
             result = container.wait(timeout=30)
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
 
             print(
-                f"\n=== Docker Integration Test ===\n{logs}\n==============================")
+                f"\n=== Docker Integration Test ===\n{logs}\n=============================="
+            )
 
-            assert result['StatusCode'] == 0
-            assert 'Docker client availability' in logs
-            assert 'Docker socket access simulation completed' in logs
+            assert result["StatusCode"] == 0
+            assert "Docker client availability" in logs
+            assert "Docker socket access simulation completed" in logs
 
         except Exception as e:
             pytest.fail(f"Docker integration test failed: {e}")
@@ -282,7 +287,7 @@ class TestNetworkIntegration:
         """Test container network connectivity."""
         client = docker.from_env()
 
-        network_test_script = '''
+        network_test_script = """
         echo "=== Network Integration Test ==="
 
         # Test basic network connectivity
@@ -321,26 +326,27 @@ class TestNetworkIntegration:
         kill $NC_PID 2>/dev/null || true
 
         echo "=== Network integration test completed ==="
-        '''
+        """
 
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', network_test_script],
+                "alpine:latest",
+                command=["sh", "-c", network_test_script],
                 detach=True,
                 remove=False,
-                network_mode='bridge'
+                network_mode="bridge",
             )
 
             result = container.wait(timeout=45)
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
 
             print(
-                f"\n=== Network Integration Test ===\n{logs}\n===============================")
+                f"\n=== Network Integration Test ===\n{logs}\n==============================="
+            )
 
-            assert result['StatusCode'] == 0
-            assert 'Network integration test completed' in logs
+            assert result["StatusCode"] == 0
+            assert "Network integration test completed" in logs
 
         except Exception as e:
             pytest.fail(f"Network integration test failed: {e}")
@@ -360,7 +366,7 @@ class TestConfigurationIntegration:
         """Test configuration file generation and processing."""
         client = docker.from_env()
 
-        config_test_script = r'''
+        config_test_script = r"""
         echo "=== Configuration Integration Test ==="
 
         CONFIG_DIR="/tmp/periphery_config"
@@ -426,33 +432,34 @@ EOF
         fi
 
         echo "=== Configuration integration test completed ==="
-        '''
+        """
 
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', config_test_script],
+                "alpine:latest",
+                command=["sh", "-c", config_test_script],
                 detach=True,
                 remove=False,
                 environment={
-                    'KOMODO_ADDRESS': 'https://config.test.example.com',
-                    'KOMODO_API_KEY': 'config-test-key',
-                    'KOMODO_API_SECRET': 'config-test-secret'
-                }
+                    "KOMODO_ADDRESS": "https://config.test.example.com",
+                    "KOMODO_API_KEY": "config-test-key",
+                    "KOMODO_API_SECRET": "config-test-secret",
+                },
             )
 
             result = container.wait(timeout=30)
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
 
             print(
-                f"\n=== Configuration Integration Test ===\n{logs}\n=====================================")
+                f"\n=== Configuration Integration Test ===\n{logs}\n====================================="
+            )
 
-            assert result['StatusCode'] == 0
-            assert 'Port setting found' in logs
-            assert 'SSL setting found' in logs
-            assert 'Logging section found' in logs
-            assert 'Configuration integration test completed' in logs
+            assert result["StatusCode"] == 0
+            assert "Port setting found" in logs
+            assert "SSL setting found" in logs
+            assert "Logging section found" in logs
+            assert "Configuration integration test completed" in logs
 
         except Exception as e:
             pytest.fail(f"Configuration integration test failed: {e}")
@@ -473,7 +480,7 @@ class TestPerformanceIntegration:
         """Test container startup time and resource usage."""
         client = docker.from_env()
 
-        performance_script = '''
+        performance_script = """
         echo "=== Performance Integration Test ==="
 
         echo "Testing startup performance..."
@@ -515,19 +522,19 @@ class TestPerformanceIntegration:
         fi
 
         echo "=== Performance integration test completed ==="
-        '''
+        """
 
         container = None
         try:
             start_time = time.time()
 
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', performance_script],
+                "alpine:latest",
+                command=["sh", "-c", performance_script],
                 detach=True,
                 remove=False,
-                mem_limit='256m',  # Set memory limit for testing
-                cpu_shares=512     # Limit CPU for testing
+                mem_limit="256m",  # Set memory limit for testing
+                cpu_shares=512,  # Limit CPU for testing
             )
 
             result = container.wait(timeout=60)
@@ -535,18 +542,21 @@ class TestPerformanceIntegration:
             end_time = time.time()
             actual_startup_time = end_time - start_time
 
-            logs = container.logs().decode('utf-8')
+            logs = container.logs().decode("utf-8")
 
             print(
-                f"\n=== Performance Integration Test ===\n{logs}\n===================================")
+                f"\n=== Performance Integration Test ===\n{logs}\n==================================="
+            )
             print(f"Actual container startup time: {actual_startup_time:.2f}s")
 
-            assert result['StatusCode'] == 0
-            assert 'Startup completed' in logs
-            assert 'Performance integration test completed' in logs
+            assert result["StatusCode"] == 0
+            assert "Startup completed" in logs
+            assert "Performance integration test completed" in logs
 
             # Verify reasonable startup time
-            assert actual_startup_time < 30, f"Container startup too slow: {actual_startup_time}s"
+            assert (
+                actual_startup_time < 30
+            ), f"Container startup too slow: {actual_startup_time}s"
 
         except Exception as e:
             pytest.fail(f"Performance integration test failed: {e}")
@@ -566,7 +576,7 @@ class TestErrorHandling:
         """Test handling of invalid configuration scenarios."""
         client = docker.from_env()
 
-        error_handling_script = r'''
+        error_handling_script = r"""
         echo "=== Error Handling Integration Test ==="
 
         # Test invalid port configuration
@@ -614,13 +624,13 @@ class TestErrorHandling:
         fi
 
         echo "=== Error handling integration test completed ==="
-        '''
+        """
 
     def test_graceful_shutdown_handling(self):
         """Test graceful shutdown and cleanup."""
         client = docker.from_env()
 
-        shutdown_script = '''
+        shutdown_script = """
         echo "=== Graceful Shutdown Integration Test ==="
 
         # Simulate periphery startup
@@ -653,15 +663,15 @@ class TestErrorHandling:
         done
 
         echo "Service stopped normally"
-        '''
+        """
 
         container = None
         try:
             container = client.containers.run(
-                'alpine:latest',
-                command=['sh', '-c', shutdown_script],
+                "alpine:latest",
+                command=["sh", "-c", shutdown_script],
                 detach=True,
-                remove=False
+                remove=False,
             )
 
             # Let it start up
@@ -669,28 +679,35 @@ class TestErrorHandling:
 
             # Check if container is still running before sending signal
             container.reload()
-            if container.status == 'running':
+            if container.status == "running":
                 # Send shutdown signal
-                container.kill(signal='TERM')
+                container.kill(signal="TERM")
 
                 result = container.wait(timeout=15)
-                logs = container.logs().decode('utf-8')
+                logs = container.logs().decode("utf-8")
 
                 print(
-                    f"\n=== Graceful Shutdown Test ===\n{logs}\n=============================")
+                    f"\n=== Graceful Shutdown Test ===\n{logs}\n============================="
+                )
 
                 # Container should exit cleanly (exit code 0 or 143 for SIGTERM)
-                assert result['StatusCode'] in [
-                    0, 143], f"Unexpected exit code: {result['StatusCode']}"
-                assert 'Starting mock periphery service' in logs
-                assert 'Graceful shutdown completed' in logs or 'Received shutdown signal' in logs
+                assert result["StatusCode"] in [
+                    0,
+                    143,
+                ], f"Unexpected exit code: {result['StatusCode']}"
+                assert "Starting mock periphery service" in logs
+                assert (
+                    "Graceful shutdown completed" in logs
+                    or "Received shutdown signal" in logs
+                )
             else:
                 # Container already stopped, check logs for completion
-                logs = container.logs().decode('utf-8')
+                logs = container.logs().decode("utf-8")
                 print(
-                    f"\n=== Graceful Shutdown Test (Early Exit) ===\n{logs}\n==========================================")
+                    f"\n=== Graceful Shutdown Test (Early Exit) ===\n{logs}\n=========================================="
+                )
 
-                assert 'Starting mock periphery service' in logs
+                assert "Starting mock periphery service" in logs
                 # If container stopped early, that's also acceptable for this test
 
         except Exception as e:
