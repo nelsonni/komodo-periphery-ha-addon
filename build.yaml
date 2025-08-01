@@ -56,9 +56,6 @@ labels:
   # Additional metadata
   org.opencontainers.image.base.name: "ghcr.io/home-assistant/alpine-base:3.21"
   org.opencontainers.image.ref.name: "komodo-periphery-ha"
-# Code signing configuration (optional)
-# Uncomment and configure if you want to sign your images
-codenotary: "nnelson8675@gmail.com"
 # Squash layers for smaller image size (optional)
 # squash: false
 
