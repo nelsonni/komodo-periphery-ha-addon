@@ -99,33 +99,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r .devcontainer/requirements.txt
 
-      - name: Create package.json for Node.js tools
-        run: |
-          # Create a minimal package.json for Node.js dependencies
-          cat > package.json << 'EOF'
-          {
-            "name": "komodo-periphery-ha-addon",
-            "version": "1.0.0",
-            "description": "Development dependencies for Komodo Periphery HA Add-on",
-            "private": true,
-            "devDependencies": {
-              "@home-assistant/cli": "^4.0.0",
-              "yaml-lint": "^1.7.0"
-            }
-          }
-          EOF
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Node.js dependencies
-        run: |
-          npm install
-          # Also install global packages for linting
-          npm install -g @home-assistant/cli yaml-lint
-
       # YAML Linting
       - name: Lint YAML files
         run: |
