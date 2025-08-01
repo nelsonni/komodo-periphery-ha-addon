@@ -3,14 +3,14 @@ Pytest configuration and fixtures for Komodo Periphery Add-on testing.
 Updated to support both basic and integration tests.
 """
 
-import os
+import shutil
 import sys
 import tempfile
-import shutil
 from pathlib import Path
-from typing import Generator, Dict, Any
-import pytest
+from typing import Any, Dict, Generator
+
 import docker
+import pytest
 import yaml
 
 # Add project root to Python path
@@ -175,7 +175,8 @@ def clean_docker_environment(docker_client: docker.DockerClient):
     """Ensure clean Docker environment for tests."""
     # Clean up any existing test containers
     try:
-        containers = docker_client.containers.list(all=True, filters={"name": "test"})
+        containers = docker_client.containers.list(
+            all=True, filters={"name": "test"})
         for container in containers:
             try:
                 container.remove(force=True)
@@ -188,7 +189,8 @@ def clean_docker_environment(docker_client: docker.DockerClient):
 
     # Cleanup after test
     try:
-        containers = docker_client.containers.list(all=True, filters={"name": "test"})
+        containers = docker_client.containers.list(
+            all=True, filters={"name": "test"})
         for container in containers:
             try:
                 container.remove(force=True)
@@ -237,7 +239,8 @@ def komodo_periphery_container(
             if not self.container:
                 self.container = self.client.containers.run(
                     self.image_name,
-                    command=["sh", "-c", 'echo "Test container started" && sleep 30'],
+                    command=["sh", "-c",
+                             'echo "Test container started" && sleep 30'],
                     detach=True,
                     remove=False,
                     environment={
@@ -306,10 +309,12 @@ def komodo_periphery_container(
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line("markers", "integration: mark test as integration test")
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test")
     config.addinivalue_line("markers", "slow: mark test as slow running")
     config.addinivalue_line("markers", "docker: mark test as requiring Docker")
-    config.addinivalue_line("markers", "network: mark test as requiring network access")
+    config.addinivalue_line(
+        "markers", "network: mark test as requiring network access")
     config.addinivalue_line("markers", "unit: mark test as unit test")
 
 

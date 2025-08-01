@@ -3,8 +3,8 @@ Basic integration tests for Komodo Periphery Add-on.
 Fixed to avoid permission and file system conflicts.
 """
 
-import pytest
 import docker
+import pytest
 
 
 @pytest.mark.integration
@@ -19,25 +19,25 @@ class TestBasicIntegration:
         # Simple test script that avoids /data directory conflicts
         test_script = """
         echo "=== Komodo Periphery Environment Test ==="
-        
+
         # Check environment variables
         echo "Environment variables:"
         echo "KOMODO_ADDRESS: $KOMODO_ADDRESS"
         echo "KOMODO_API_KEY: ${KOMODO_API_KEY:0:8}..." # Show only first 8 chars
         echo "KOMODO_API_SECRET: ${KOMODO_API_SECRET:0:8}..."
-        
+
         # Validate required environment variables
         if [ -z "$KOMODO_ADDRESS" ] || [ -z "$KOMODO_API_KEY" ] || [ -z "$KOMODO_API_SECRET" ]; then
             echo "ERROR: Missing required environment variables"
             exit 1
         fi
-        
+
         # Use /tmp instead of /data to avoid permission conflicts
         WORK_DIR="/tmp/periphery_test"
         echo "Creating working directory: $WORK_DIR"
         mkdir -p "$WORK_DIR/config"
         mkdir -p "$WORK_DIR/ssl"
-        
+
         # Generate mock configuration file
         echo "Generating configuration file..."
         cat > "$WORK_DIR/config/periphery.config.toml" << 'EOF'
@@ -54,7 +54,7 @@ pretty = false
 address = "0.0.0.0"
 ssl_enabled = true
 EOF
-        
+
         # Verify configuration file was created
         if [ -f "$WORK_DIR/config/periphery.config.toml" ]; then
             echo "✓ Configuration file created successfully"
@@ -64,11 +64,11 @@ EOF
             echo "✗ Failed to create configuration file"
             exit 1
         fi
-        
+
         # Test basic user creation (without conflicting with existing files)
         echo "Testing user management..."
         adduser -D -s /bin/sh -u 1001 testuser 2>/dev/null || echo "User creation skipped (may already exist)"
-        
+
         # Test file permissions in our working directory
         echo "Testing file permissions..."
         touch "$WORK_DIR/test_file"
@@ -79,7 +79,7 @@ EOF
             echo "✗ File creation failed"
             exit 1
         fi
-        
+
         echo "=== Test completed successfully ==="
         """
 
@@ -105,7 +105,8 @@ EOF
 
             # Get logs before container is removed
             logs = container.logs().decode("utf-8")
-            print(f"\n=== Container Output ===\n{logs}\n========================")
+            print(
+                f"\n=== Container Output ===\n{logs}\n========================")
 
             # Verify success
             assert (
@@ -119,7 +120,8 @@ EOF
             assert "Test completed successfully" in logs
 
         except docker.errors.DockerException as e:
-            pytest.fail(f"Docker error in mock Periphery environment test: {e}")
+            pytest.fail(
+                f"Docker error in mock Periphery environment test: {e}")
         except Exception as e:
             pytest.fail(f"Mock Periphery environment test failed: {e}")
         finally:
@@ -137,30 +139,30 @@ EOF
         # Script that creates a clean environment without touching existing /data files
         setup_script = """
         echo "=== Data Directory Setup Test ==="
-        
+
         # Use a completely separate directory to avoid conflicts
         TEST_DATA_DIR="/tmp/clean_test_data"
         echo "Using test data directory: $TEST_DATA_DIR"
-        
+
         # Clean setup
         rm -rf "$TEST_DATA_DIR" 2>/dev/null || true
         mkdir -p "$TEST_DATA_DIR/config"
         mkdir -p "$TEST_DATA_DIR/ssl"
         mkdir -p "$TEST_DATA_DIR/logs"
-        
+
         # Create test user with unique UID to avoid conflicts
         adduser -D -u 1002 -s /bin/sh cleanuser 2>/dev/null || echo "User setup skipped"
-        
+
         # Set ownership only on our test directory
         chown -R 1002:1002 "$TEST_DATA_DIR" 2>/dev/null || echo "Ownership change skipped"
-        
+
         # Test file operations as the test user
         su cleanuser -c "
             echo 'Testing file operations as cleanuser...'
             mkdir -p '$TEST_DATA_DIR/config'
             echo 'port=8120' > '$TEST_DATA_DIR/config/test.conf'
             echo 'log_level=debug' >> '$TEST_DATA_DIR/config/test.conf'
-            
+
             if [ -f '$TEST_DATA_DIR/config/test.conf' ]; then
                 echo '✓ Configuration file created successfully by user'
                 cat '$TEST_DATA_DIR/config/test.conf'
@@ -173,7 +175,7 @@ EOF
             echo "User switching failed, testing with current user..."
             echo 'port=8120' > "$TEST_DATA_DIR/config/test.conf"
             echo 'log_level=debug' >> "$TEST_DATA_DIR/config/test.conf"
-            
+
             if [ -f "$TEST_DATA_DIR/config/test.conf" ]; then
                 echo "✓ Configuration file created successfully"
                 cat "$TEST_DATA_DIR/config/test.conf"
@@ -182,13 +184,13 @@ EOF
                 exit 1
             fi
         }
-        
+
         # Verify directory structure
         echo "Directory structure:"
         ls -la "$TEST_DATA_DIR"
         echo "Config directory:"
         ls -la "$TEST_DATA_DIR/config"
-        
+
         echo "=== Data directory test completed successfully ==="
         """
 
@@ -212,7 +214,8 @@ EOF
 
             # Get logs before removing container
             logs = container.logs().decode("utf-8")
-            print(f"\n=== Container Output ===\n{logs}\n========================")
+            print(
+                f"\n=== Container Output ===\n{logs}\n========================")
 
             # Check exit code
             assert (
@@ -336,7 +339,8 @@ class TestContainerBasics:
             result = container.wait(timeout=30)
             logs = container.logs().decode("utf-8")
 
-            print(f"\n=== Environment Test ===\n{logs}\n========================")
+            print(
+                f"\n=== Environment Test ===\n{logs}\n========================")
 
             assert result["StatusCode"] == 0
 
