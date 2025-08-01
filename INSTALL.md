@@ -334,4 +334,4 @@ For additional help:
 - 📖 [Home Assistant Add-on Development Documentation](https://developers.home-assistant.io/docs/add-ons)
 - 🦎 [Komodo Documentation](https://komo.do/docs)
 - 💬 [Home Assistant Community Forum](https://community.home-assistant.io)
-- 🐛 [GitHub Issues](https://github.com/your-username/komodo-periphery-addon/issues)
+- 🐛 [GitHub Issues](https://github.com/nelsonni/komodo-periphery-ha-addon/issues)

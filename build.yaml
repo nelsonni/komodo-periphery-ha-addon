@@ -28,15 +28,15 @@ args:
 # Container image labels (OCI compliant)
 labels:
   # Basic information
-  org.opencontainers.image.title: "Komodo Periphery"
+  org.opencontainers.image.title: "Komodo Periphery HA Add-on"
   org.opencontainers.image.description: "Komodo Periphery agent for monitoring Home Assistant OS system metrics"
   org.opencontainers.image.vendor: "Home Assistant Community"
   org.opencontainers.image.authors: "Home Assistant Community <hello@home-assistant.io>"
 
   # Source and documentation
-  org.opencontainers.image.url: "https://github.com/nelsonni/komodo-periphery-addon"
-  org.opencontainers.image.source: "https://github.com/nelsonni/komodo-periphery-addon"
-  org.opencontainers.image.documentation: "https://github.com/nelsonni/komodo-periphery-addon/blob/main/README.md"
+  org.opencontainers.image.url: "https://github.com/nelsonni/komodo-periphery-ha-addon"
+  org.opencontainers.image.source: "https://github.com/nelsonni/komodo-periphery-ha-addon"
+  org.opencontainers.image.documentation: "https://github.com/nelsonni/komodo-periphery-ha-addon/blob/main/README.md"
 
   # Legal and licensing
   org.opencontainers.image.licenses: "MIT"
@@ -55,11 +55,10 @@ labels:
 
   # Additional metadata
   org.opencontainers.image.base.name: "ghcr.io/home-assistant/alpine-base:3.21"
-  org.opencontainers.image.ref.name: "komodo-periphery"
+  org.opencontainers.image.ref.name: "komodo-periphery-ha"
 # Code signing configuration (optional)
 # Uncomment and configure if you want to sign your images
-# codenotary: "your-email@example.com"
-
+codenotary: "nnelson8675@gmail.com"
 # Squash layers for smaller image size (optional)
 # squash: false
 

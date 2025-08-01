@@ -14,9 +14,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-export ADDON_NAME="komodo-periphery"  # Export since it's used in functions
-ADDON_SLUG="komodo_periphery"
-REPO_NAME="komodo-periphery-addon"
+export ADDON_NAME="komodo-periphery-ha"  # Export since it's used in functions
+ADDON_SLUG="komodo_periphery-ha"
+REPO_NAME="komodo-periphery-ha-addon"
 HA_ADDONS_DIR=""
 DEV_MODE=false
 PRODUCTION_MODE=false
@@ -64,7 +64,7 @@ command_exists() {
 # Install dependencies based on OS
 install_dependencies() {
     print_status "Installing dependencies..."
-    
+
     case $OS in
         "linux")
             # Detect Linux distribution
@@ -72,11 +72,11 @@ install_dependencies() {
                 print_status "Installing dependencies via apt..."
                 sudo apt-get update
                 sudo apt-get install -y git curl docker.io docker-compose jq
-                
+
                 # Add user to docker group
                 sudo usermod -aG docker "$USER"
                 print_warning "You may need to log out and back in for Docker group changes to take effect"
-                
+
             elif command_exists yum; then
                 print_status "Installing dependencies via yum..."
                 sudo yum update -y
@@ -84,25 +84,25 @@ install_dependencies() {
                 sudo systemctl enable docker
                 sudo systemctl start docker
                 sudo usermod -aG docker "$USER"
-                
+
             elif command_exists pacman; then
                 print_status "Installing dependencies via pacman..."
                 sudo pacman -Syu --noconfirm git curl docker docker-compose jq
                 sudo systemctl enable docker
                 sudo systemctl start docker
                 sudo usermod -aG docker "$USER"
-                
+
             else
                 print_error "Unsupported Linux distribution. Please install git, curl, docker, docker-compose, and jq manually."
                 exit 1
             fi
             ;;
-            
+
         "macos")
             if command_exists brew; then
                 print_status "Installing dependencies via Homebrew..."
                 brew install git curl jq
-                
+
                 # Check if Docker Desktop is installed
                 if ! command_exists docker; then
                     print_warning "Docker Desktop not found. Please install Docker Desktop for Mac from:"
@@ -115,24 +115,24 @@ install_dependencies() {
                 exit 1
             fi
             ;;
-            
+
         "windows")
             print_warning "Windows detected. Ensure you have the following installed:"
             print_warning "- Git for Windows (includes Git Bash)"
             print_warning "- Docker Desktop for Windows"
             print_warning "- WSL2 (recommended for development)"
-            
+
             if ! command_exists git; then
                 print_error "Git not found. Please install Git for Windows."
                 exit 1
             fi
-            
+
             if ! command_exists docker; then
                 print_error "Docker not found. Please install Docker Desktop for Windows."
                 exit 1
             fi
             ;;
-            
+
         *)
             print_error "Unsupported operating system: $OSTYPE"
             exit 1
@@ -143,7 +143,7 @@ install_dependencies() {
 # Find Home Assistant configuration directory
 find_ha_config() {
     print_status "Looking for Home Assistant configuration directory..."
-    
+
     # Common paths for different setups
     local ha_paths=(
         "$HOME/.homeassistant"
@@ -153,12 +153,12 @@ find_ha_config() {
         "$HOME/Documents/HomeAssistant"
         "$HOME/Development/homeassistant"
     )
-    
+
     # Check if user provided a custom path
     if [[ -n "$HA_CONFIG_PATH" ]]; then
         ha_paths=("$HA_CONFIG_PATH" "${ha_paths[@]}")
     fi
-    
+
     for path in "${ha_paths[@]}"; do
         if [[ -f "$path/configuration.yaml" ]]; then
             HA_CONFIG_DIR="$path"
@@ -167,12 +167,12 @@ find_ha_config() {
             return 0
         fi
     done
-    
+
     # If not found, ask user
     print_warning "Home Assistant configuration directory not found automatically."
     echo -n "Please enter the path to your Home Assistant config directory: "
     read -r user_path
-    
+
     if [[ -f "$user_path/configuration.yaml" ]]; then
         HA_CONFIG_DIR="$user_path"
         HA_ADDONS_DIR="$user_path/addons"
@@ -186,10 +186,10 @@ find_ha_config() {
 # Setup VS Code devcontainer for HA add-on development
 setup_devcontainer() {
     print_status "Setting up VS Code devcontainer for Home Assistant add-on development..."
-    
+
     local devcontainer_dir=".devcontainer"
     mkdir -p "$devcontainer_dir"
-    
+
     # Create devcontainer.json
     cat > "$devcontainer_dir/devcontainer.json" << 'EOF'
 {
@@ -232,13 +232,13 @@ EOF
 # Create local development environment
 setup_local_dev() {
     print_status "Setting up local development environment..."
-    
+
     # Create addons directory if it doesn't exist
     mkdir -p "$HA_ADDONS_DIR"
-    
+
     # Create symlink or copy addon to HA addons directory
     local addon_target="$HA_ADDONS_DIR/$ADDON_SLUG"
-    
+
     if [[ -L "$addon_target" ]]; then
         print_warning "Addon symlink already exists, removing..."
         rm "$addon_target"
@@ -246,7 +246,7 @@ setup_local_dev() {
         print_warning "Addon directory already exists, backing up..."
         mv "$addon_target" "${addon_target}.backup.$(date +%Y%m%d_%H%M%S)"
     fi
-    
+
     # Create symlink (preferred for development)
     if ln -sf "$(pwd)" "$addon_target" 2>/dev/null; then
         print_status "Created symlink: $addon_target -> $(pwd)"
@@ -261,21 +261,21 @@ setup_local_dev() {
 # Build addon locally for testing
 build_addon() {
     print_status "Building addon Docker image..."
-    
+
     # Build for current architecture
     local arch=""
     case $(uname -m) in
         x86_64) arch="amd64" ;;
         aarch64|arm64) arch="aarch64" ;;
         armv7l) arch="armv7" ;;
-        *) 
+        *)
             print_error "Unsupported architecture: $(uname -m)"
             exit 1
             ;;
     esac
-    
+
     local image_name="ghcr.io/home-assistant/$ADDON_SLUG-$arch:latest"
-    
+
     if command_exists docker; then
         print_status "Building Docker image: $image_name"
         docker build --build-arg BUILD_ARCH="$arch" -t "$image_name" .
@@ -289,7 +289,7 @@ build_addon() {
 # Setup production deployment
 setup_production() {
     print_status "Setting up production deployment..."
-    
+
     # Create build configuration
     cat > "build.yaml" << EOF
 build_from:
@@ -350,7 +350,7 @@ jobs:
               break
             fi
           done
-          
+
           changed=$(printf "%s\n" "${changed_addons[@]}" | jq -R -s -c 'split("\n")[:-1]')
           echo "changed=$changed" >> $GITHUB_OUTPUT
           echo "addons=$changed" >> $GITHUB_OUTPUT
@@ -415,7 +415,7 @@ EOF
 # Create project documentation
 create_documentation() {
     print_status "Creating development documentation..."
-    
+
     cat > "DEVELOPMENT.md" << 'EOF'
 # Komodo Periphery Add-on Development
 
@@ -478,7 +478,7 @@ EOF
 # Main installation function
 main() {
     print_header
-    
+
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -502,15 +502,15 @@ main() {
                 ;;
         esac
     done
-    
+
     # If no mode specified, default to dev
     if [[ "$DEV_MODE" == false && "$PRODUCTION_MODE" == false ]]; then
         DEV_MODE=true
     fi
-    
+
     detect_os
     install_dependencies
-    
+
     if [[ "$DEV_MODE" == true ]]; then
         print_status "Setting up development environment..."
         find_ha_config
@@ -518,24 +518,24 @@ main() {
         setup_local_dev
         build_addon
         create_documentation
-        
+
         print_status "Development setup complete!"
         print_status "You can now:"
         print_status "1. Open this project in VS Code"
         print_status "2. Use the devcontainer for development"
         print_status "3. Find the add-on in Home Assistant Supervisor -> Add-on Store -> Local add-ons"
-        
+
     elif [[ "$PRODUCTION_MODE" == true ]]; then
         print_status "Setting up production deployment..."
         setup_production
         create_documentation
-        
+
         print_status "Production setup complete!"
         print_status "1. Update the repository URL in build.yaml and GitHub workflow"
         print_status "2. Commit and push to GitHub to trigger automated builds"
         print_status "3. Users can install from your repository"
     fi
-    
+
     print_status "Installation completed successfully!"
 }
 

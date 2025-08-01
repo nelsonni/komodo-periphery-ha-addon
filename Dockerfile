@@ -55,9 +55,9 @@ RUN ARCH=$(uname -m) \
         *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
     esac \
     && if [ "$KOMODO_VERSION" = "latest" ]; then \
-        DOWNLOAD_URL="https://github.com/moghtech/komodo/releases/latest/download/periphery-$ARCH_NAME-unknown-linux-musl"; \
+        DOWNLOAD_URL="https://github.com/moghtech/komodo/releases/latest/download/periphery-$ARCH_NAME"; \
     else \
-        DOWNLOAD_URL="https://github.com/moghtech/komodo/releases/download/$KOMODO_VERSION/periphery-$ARCH_NAME-unknown-linux-musl"; \
+        DOWNLOAD_URL="https://github.com/moghtech/komodo/releases/download/$KOMODO_VERSION/periphery-$ARCH_NAME"; \
     fi \
     && curl -fsSL "$DOWNLOAD_URL" -o /usr/local/bin/periphery \
     && chmod +x /usr/local/bin/periphery
@@ -65,6 +65,7 @@ RUN ARCH=$(uname -m) \
 # Create non-root user for security
 RUN addgroup -g 1000 komodo \
     && adduser -D -s /bin/bash -G komodo -u 1000 komodo \
+    && (getent group docker >/dev/null || addgroup docker) \
     && addgroup komodo docker
 
 # Set proper permissions

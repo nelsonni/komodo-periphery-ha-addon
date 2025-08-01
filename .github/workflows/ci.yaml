@@ -104,9 +104,9 @@ jobs:
           # Create a minimal package.json for Node.js dependencies
           cat > package.json << 'EOF'
           {
-            "name": "komodo-periphery-addon",
+            "name": "komodo-periphery-ha-addon",
             "version": "1.0.0",
-            "description": "Development dependencies for Komodo Periphery Add-on",
+            "description": "Development dependencies for Komodo Periphery HA Add-on",
             "private": true,
             "devDependencies": {
               "@home-assistant/cli": "^4.0.0",

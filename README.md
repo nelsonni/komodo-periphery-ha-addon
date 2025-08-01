@@ -16,7 +16,7 @@ Komodo is a lightweight, Rust-based system for building and deploying software a
 ## Installation
 
 1. Navigate in your Home Assistant frontend to **Supervisor** → **Add-on Store**.
-2. Add this repository URL: `https://github.com/your-username/komodo-periphery-addon`
+2. Add this repository URL: `https://github.com/nelsonni/komodo-periphery-ha-addon`
 3. Find the "Komodo Periphery" add-on and click it.
 4. Click on the "INSTALL" button.
 
@@ -59,7 +59,7 @@ Controls the verbosity of log output. Valid values: `trace`, `debug`, `info`, `w
 
 ### Option: `stats_polling_rate`
 
-How often to poll the system for stats like CPU and memory usage. 
+How often to poll the system for stats like CPU and memory usage.
 Valid values: `1-sec`, `5-sec`, `10-sec`, `30-sec`, `1-min`, etc.
 
 ### Option: `container_stats_polling_rate`
@@ -105,6 +105,7 @@ This add-on requires several elevated privileges to monitor system metrics and m
 The add-on runs as a non-root user (`komodo`) for security, but needs Docker group access for container management.
 
 **Important Security Notes:**
+
 - Use strong, unique API keys and secrets
 - Consider using IP allowlists in production environments
 - Enable SSL/TLS for encrypted communication
@@ -150,6 +151,6 @@ SOFTWARE.
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [armhf-shield]: https://img.shields.io/badge/armhf-yes-green.svg
 [armv7-shield]: https://img.shields.io/badge/armv7-yes-green.svg
-[issue]: https://github.com/your-username/komodo-periphery-addon/issues
+[issue]: https://github.com/nelsonni/komodo-periphery-ha-addon/issues
 [komodo-docs]: https://komo.do/docs
 [forum]: https://community.home-assistant.io

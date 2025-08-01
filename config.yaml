@@ -38,7 +38,7 @@ schema:
   monitor_homeassistant: bool
   allowed_ips: "[str]?"
   passkeys: "[password]?"
-image: "ghcr.io/home-assistant/komodo-periphery-{arch}"
+image: "ghcr.io/nelsonni/komodo-periphery-{arch}"
 privileged:
   - SYS_ADMIN
 docker_api: true
