@@ -127,7 +127,8 @@ jobs:
           if [ -f .yamllint.yml ]; then
             yamllint -c .yamllint.yml config.yaml build.yaml .github/workflows/ translations/
           else
-            yamllint -d "{extends: default, rules: {line-length: {max: 130}}}" config.yaml build.yaml .github/workflows/ translations/
+            yamllint -d "{extends: default, rules: {line-length: {max: 130}}}" \
+            config.yaml build.yaml .github/workflows/ translations/
           fi
 
       # JSON Linting
@@ -203,20 +204,20 @@ jobs:
       - name: Check Python code quality
         run: |
           echo "🐍 Checking Python code quality with pinned tool versions..."
-          
+
           # Check installation scripts
           echo "Compiling install.py..."
           python -m py_compile install.py
-          
+
           echo "Checking install.py formatting with Black ${{ env.BLACK_VERSION }}..."
           black --check --diff install.py
-          
+
           echo "Checking install.py import sorting..."
           isort --check-only --diff install.py
-          
+
           echo "Running flake8 on install.py..."
           flake8 install.py --max-line-length=120
-          
+
           echo "Running pylint on install.py..."
           pylint install.py --disable=C0114,C0116 || true
 
@@ -224,13 +225,13 @@ jobs:
           if [ -d "tests" ]; then
             echo "Compiling test files..."
             python -m py_compile tests/*.py
-            
+
             echo "Checking test files formatting with Black..."
             black --check --diff tests/
-            
+
             echo "Checking test files import sorting..."
             isort --check-only --diff tests/
-            
+
             echo "Running flake8 on test files..."
             flake8 tests/ --max-line-length=120
           fi
