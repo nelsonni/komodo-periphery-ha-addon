@@ -8,8 +8,6 @@ env:
 
 # Trigger conditions
 on:
-  schedule:
-    - cron: "0 2 * * 0" # Weekly builds on Sunday at 2 AM UTC
   push:
     branches:
       - main
@@ -56,16 +54,15 @@ jobs:
       - name: Get changed files
         id: changed_files
         uses: jitterbit/get-changed-files@v1
-        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'workflow_dispatch'
 
       - name: Find add-on directories
         id: changed_addons
         run: |
           declare -a changed_addons
 
-          # Force build if scheduled, workflow_dispatch, or force_build is true
-          if [[ "${{ github.event_name }}" == "schedule" ]] || \
-             [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
+          # Force build if workflow_dispatch or force_build is true
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
              [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
             changed_addons+=("komodo_periphery")
           else
